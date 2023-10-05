@@ -1,20 +1,21 @@
-@with_kw struct InitParams
+@with_kw struct InitializationParameters
 	#  Parameters needed to generate weight matrix
 	Ne::Int64 = 4000		    # Excitatory no. neurons
 	Ni::Int64 = 1000		    # Total Inhibitory no. neurons
-	Ni2::Int64 = 500	        # Inhibitory no. neurons (2nd i-population)
-	jee0::Float64 = 2.86 	    # Initial EE strength (pF)
-	jei0::Float64 = 48.7    	# Initial EI strength (pF)
-	jie::Float64 = 1.27 	    # Initial E-to-I strength (pF)
-	jii::Float64 = 16.2 	    # I1 to I1 & I2 to I1 strength (not plastic; pF)
-	jii12::Float64 = 24.3#21.3#24.3	    # I1 to I2 strength (not plastic; pF) was 30.
-	jii2::Float64 = 32.4#24.3	    # I2 to I2 strength (not plastic; pF)
+	Ni2::Int64 = 500	        # Inhibitory no. neurons (I₂)
+	jee0::Float64 = 2.86 	    # Initial E➡E strength (pF)
+	jei0::Float64 = 48.7    	# Initial I➡E strength (pF)
+	jie::Float64 = 1.27 	    # Initial E➡I1 strength (pF)
+	ji2e::Float64 = 1.52 	    # Initial E➡I2 strength (pF)
+	jii::Float64 = 16.2 	    # I1➡I1 & I2➡I1 strength (not plastic; pF)
+	jii12::Float64 = 24.3	    # I1➡I2 strength (not plastic; pF)
+	jii2::Float64 = 32.4	    # I2➡I2 strength (not plastic; pF)
 	p::Float64 = 0.2		    # Connection probability
 	pmembership::Float64 = .05  # Probability of a neuron to belong to any assembly
 	Nmaxmembers::Int64 = 300  	# Maximum number of neurons in a population (to set size of matrix)
 end
 
-@with_kw struct NeuronalParams
+@with_kw struct NeuronalParameters
     # --- Membrane dynamics parameters ---
     taue::Float64 = 20. 	    # E resting membrane time constant (ms)
 	taui::Float64 = 20.  		# I resting membrane time constant (ms)
@@ -35,7 +36,7 @@ end
 	tauw_adapt::Float64 = 150.	# Adaptation timescale (ms)
 end
 
-@with_kw struct SynapticParams
+@with_kw struct SynapticParameters
     # --- Synaptic dynamics parameters ---
 	tauerise::Float64 = 1. 	# E synapse rise time (ms)
 	tauedecay::Float64 = 6.	# E synapse decay time (ms)
@@ -48,15 +49,15 @@ end
     # --- Plastic synapses, strength limits ---
 	jeemin::Float64 = 1.78  # Minimum EE strength (pF)
 	jeemax::Float64 = 21.4  # Maximum EE strength (pF)
-	jeimin::Float64 = 48.7 	# Minimum I1 to E strength (pF)
-	jeimax::Float64 = 243. 	# Maximum I1 to E strength (pF)
-	jiemin::Float64 = .1 	# Minimum E to I2 strength (pF)
-	jiemax::Float64 = 4. 	# Maximum E to I2 strength (pF)
-	jei2min::Float64 = .001	# Minimum I2 to E strength (pF)
-	jei2max::Float64 = 243. # Maximum I2 to E strength (pF) was: 600.
+	jeimin::Float64 = 48.7 	# Minimum I1➡E strength (pF)
+	jeimax::Float64 = 243. 	# Maximum I1➡E strength (pF)
+	jiemin::Float64 = .1 	# Minimum E➡I2 strength (pF)
+	jiemax::Float64 = 4. 	# Maximum E➡I2 strength (pF)
+	jei2min::Float64 = .001	# Minimum I2➡E strength (pF)
+	jei2max::Float64 = 243. # Maximum I2➡E strength (pF)
 end
 
-@with_kw struct PlasticityParams
+@with_kw struct PlasticityParameters
     # --- Voltage based STDP ---
 	altd::Float64 = .0008 	    # LTD strength (pA / mV)
 	altp::Float64 = .0014 	    # LTP strength (pA / mV^2)
@@ -76,11 +77,11 @@ end
 	ilamda::Float64 = 1.		# iSTDP₂ learning rate
 	# --- eiSTDP ---
 	tau_ie::Float64 = 20.		# eiSTDP time constant (ms)
-	eta_ie::Float64 = .0015#.001  	# eiSTDP learning rate (pA)
-	Adep_ie::Float64 = .12	    # Amplitude of depression (kHz*ms; NOTE: then it has no unit (?)) NOTE: This needs to be [.08, .12]
+	eta_ie::Float64 = .0015  	# eiSTDP learning rate (pA)
+	Adep_ie::Float64 = .12	    # Amplitude of depression (kHz*ms; NOTE: then it has no unit (?))
 end
 
-@with_kw struct SimParams
+@with_kw struct SimulationParameters
     dt::Float64 = .1            # Integration timestep (ms)
     dtnormalize::Int64 = 20 	# How often to normalize rows of EE weights (ms)
 	stdpdelay::Int64 = 10000 	# Time before stdp is activated, to allow transients to die out (ms)
