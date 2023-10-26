@@ -1,4 +1,78 @@
 
+
+
+
+
+T = 8_000
+stim = [1. 1001 1030 8; 1 1201 1230 8; 1 1401 1430 8; 1 1601 1630 8; 1 1801 1830 8;
+		5 2001 2030 8; 5 2201 2230 8; 5 2401 2430 8; 5 2601 2630 8; 5 2801 2830 8;
+		9 3001 3030 8; 9 3201 3230 8; 9 3401 3430 8; 9 3601 3630 8; 9 3801 3830 8;
+		13 4001 4030 8; 13 4201 4230 8; 13 4401 4430 8; 13 4601 4630 8; 13 4801 4830 8;
+		17 5001 5030 8; 17 5201 5230 8; 17 5401 5430 8; 17 5601 5630 8; 17 5801 5830 8]
+
+sim_name = string("network_1.h5")
+sim_savepath = "./networks/"
+output_dir = "./output/"
+
+fid = h5open(joinpath(sim_savepath, sim_name), "r")
+popmembers = read(fid["data"]["popmembers"])
+weights_old = read(fid["data"]["weights"])
+close(fid)
+times, ns, Ne, Ncells, T, new_weights = sim(stim, weights_old, popmembers, T)
+
+
+ipopmembers = findI2populations(weights_old, 20, popmembers, iipop_len=25)
+
+i_structs = zeros(20, 500)
+
+for i = 1:20
+	members = filter(i->i>0, popmembers[i, :])
+	for j = 4501:5000
+		# i_structs[i, 1:length(weights_old[j, members])] .= weights_old[j, members]
+		# i_structs[i, 1:length(members)] .= weights_old[j, members]
+		for mem in members
+			i_structs[i, j-4500] += weights_old[j, mem]
+		end
+	end
+end
+
+i_count = zeros(20, 500)
+
+for i = 1:20
+	members = filter(i->i>0, popmembers[i, :])
+	for j = 4501:5000
+		for mem in members
+			if weights_old[j, mem] > 0
+				i_count[i, j-4500] += 1
+			end
+		end
+	end
+end
+
+
+for i = 1:20
+	if i==1
+		perm = sortperm(i_structs[i, :], rev=true)
+		Plots.plot(i_structs[i, perm])
+		# Plots.plot(sort(i_structs[i, :], rev=true))
+		# Plots.plot(i_structs[i, :])
+	else
+		Plots.plot!(i_structs[i, perm])
+		# Plots.plot!(sort(i_structs[i, :], rev=true))
+		# Plots.plot!(i_structs[i, :])
+	end
+end
+
+Plots.plot!()
+
+
+
+
+
+
+
+
+###############################################################################
 ipopmembers = findI2populations(new_weights, Npop, popmembers, iipop_len=25)
 
 totalI = zeros(20)
