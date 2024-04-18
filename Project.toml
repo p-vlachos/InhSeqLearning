@@ -2,4 +2,5 @@
 Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 InhSequences = "cd0943a4-5c5d-486b-9e63-63a337df0f09"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 RDatasets = "ce6b1742-4840-55fa-b093-852dadbb1d8b"

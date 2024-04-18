@@ -2,7 +2,7 @@
 	#  Parameters needed to generate weight matrix
 	Ne::Int64 = 4000		    # Excitatory no. neurons
 	Ni::Int64 = 1000		    # Total Inhibitory no. neurons
-	Ni2::Int64 = 500	        # Inhibitory no. neurons (I₂)
+	Ni2::Int64 = 250	        # Inhibitory no. neurons (I₂)
 	jee0::Float64 = 2.86 	    # Initial E➡E strength (pF)
 	jei0::Float64 = 48.7    	# Initial I➡E strength (pF)
 	jie::Float64 = 1.27 	    # Initial E➡I1 strength (pF)
@@ -76,7 +76,7 @@ end
 	alfa::Float64 = 1.		    # Asymmetry between potentiation and depression (one: symmetric)
 	ilamda::Float64 = 1.		# iSTDP₂ learning rate
 	# --- eiSTDP ---
-	tau_ie::Float64 = 20.		# eiSTDP time constant (ms)
+	tau_ie::Float64 = 50.		# eiSTDP time constant (ms)
 	eta_ie::Float64 = .0015  	# eiSTDP learning rate (pA)
 	Adep_ie::Float64 = .12	    # Amplitude of depression (kHz*ms; NOTE: then it has no unit (?))
 end
@@ -86,4 +86,16 @@ end
     dtnormalize::Int64 = 20 	# How often to normalize rows of EE weights (ms)
 	stdpdelay::Int64 = 10000 	# Time before stdp is activated, to allow transients to die out (ms)
 	Nspikes::Int64 = 10000	 	# Maximum number of spikes to record per neuron
+end
+
+@with_kw struct Tracker
+	T::Int64
+	Ni::Int64
+	Ni2::Int64
+	Npop::Int64
+	tracker_dt::Float64
+	Nsteps::Int64 = round(Int, T/tracker_dt)
+	weightsEE::Array{Float64, 3} = zeros(Npop, Npop, Nsteps)	# E-to-E
+	weightsEI::Array{Float64, 3} = zeros(Ni2, Npop, Nsteps)		# E-to-I
+	weightsIE::Array{Float64, 3} = zeros(Ni, Npop, Nsteps)		# I-to-E
 end

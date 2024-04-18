@@ -122,6 +122,13 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 		end
 	end
 
+	# --- TRACKERS ---
+	tracker_indx::Int64 = 1
+	Npop::Int64 = maximum(Int, stim[:, 1])	# Number of assemblies
+	tracker = Tracker(T=T, Ni=Ni, Ni2=Ni2, Npop=Npop, tracker_dt=round(Int, T/10_000))
+	@unpack tracker_dt, weightsEE, weightsEI, weightsIE = tracker
+	tracker_dt /= dt
+
 	@info "Starting simulation"
 	# --- Begin main simulation loop ---
 	iterSteps = ProgressBar(1:Nsteps)
@@ -303,7 +310,7 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 			end # End, iSTDP₂
 
 			#  _____ eiSTDP _____
-			if spiked[cc] && (t > stdpdelay)# && (t < stim[end,3])
+			if spiked[cc] && (t > stdpdelay) && (t < stim[end,3])
 				if cc <= Ne
 					# Excitatory neuron fired, modify outputs to 2nd i-population
 					for dd = (Ncells-Ni2+1):Ncells
@@ -316,6 +323,7 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 					for dd = 1:Ne
 						(weights[dd, cc] == 0.) && (continue)
 						weights[dd, cc] += eta_ie * (trace_eistdp[dd] - Adep_ie)
+						# weights[dd, cc] -= eta_ie * trace_eistdp[dd]
 						if weights[dd, cc] > jiemax
 							weights[dd, cc] = jiemax
 						elseif weights[dd, cc] < jiemin
@@ -349,10 +357,28 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 		@. forwardInputsEPrev = forwardInputsE
 		@. forwardInputsIPrev = forwardInputsI
 		@. spiked = false
+
+		# --- TRACKERS ---
+		if mod(tt-1, tracker_dt) == 0
+			for ipop = 1:Npop
+				pmembers = filter(i->i>0, popmembers[ipop, :])
+				for iipop = 1:Npop					
+					ppmembers = filter(i->i>0, popmembers[iipop, :])
+					weightsEE[iipop, ipop, tracker_indx] = sum(weights[ppmembers, pmembers])
+				end
+				for cc = 1:Ni
+					weightsIE[cc, ipop, tracker_indx] = sum(weights[cc+Ne, pmembers])
+					if cc > (Ni - Ni2)
+						weightsEI[(cc-(Ni-Ni2)), ipop, tracker_indx] = sum(weights[pmembers, (cc+Ne)])
+					end
+				end
+			end
+			tracker_indx += 1
+		end
 	end # End, loop over time
 
 	print("\r")
 	times = times[:, 1:maximum(ns)]
 
-	return times, ns, Ne, Ncells, T, weights
+	return times, ns, Ne, Ncells, T, weights, weightsEE, weightsIE, weightsEI
 end

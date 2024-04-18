@@ -1,8 +1,161 @@
+ppp = 0
+x = rand(500, 500, 500)
+@time for i=1:500
+	for j=1:500
+		for k=1:500
+			# x[i, j, k] += .01
+			x[k, j, i] += .01
+			# x[j, k, i] += .01
+		end
+	end
+end
+
+
+sim_name = string("network_9.h5")
+sim_savepath = "./networks_new/"
+output_dir = "./output_new/"
+
+
+fid = h5open(joinpath(sim_savepath, sim_name), "r")
+popmembers = read(fid["data"]["popmembers"])
+weights = read(fid["data"]["weights"])
+weightsEE = read(fid["data"]["weightsEE"])
+weightsEI = read(fid["data"]["weightsEI"])
+weightsIE = read(fid["data"]["weightsIE"])
+close(fid)
+# times, ns, Ne, Ncells, T, new_weights = sim(stim, weights_old, popmembers, T)
+
+
+ipopmembers = findI2populations(weights, 20, popmembers, iipop_len=100)
+
+
+
+popmemlen = zeros(20)
+for ipop = 1:20
+	popmemlen[ipop] = length(filter(i->i>0, popmembers[ipop, :]))
+end
+
+using Plots
+
+Plots.plot()
+# plot_data = zeros(10, 10000)
+for ipop = 1:20
+	for iipop = 1:20
+		if ipop == iipop
+		# if ipop != iipop
+			Plots.plot!(weightsEE[ipop, iipop, :])
+		end
+	end
+end
+Plots.plot!(legend=false)
+
+
+
+# Plots.plot()	# This makes not much sense ... too much info
+# for ipop = 1:20
+# 	for cc = 1:250
+# 	# for cc = 1:500
+# 	# for cc = 500:1000
+# 		# if ipop == iipop
+# 		if cc in popmembers[ipop, :]
+# 			Plots.plot!(weightsEI[cc, ipop, :])
+# 		end
+# 	end
+# end
+# Plots.plot!(legend=false)
+
+
+
+# Plots.plot()
+# plot_data = zeros(20, 10000)
+# # for ipop = 1:20
+# # for cc = 1:1000
+# for cc = 1:500
+# # for cc = 500:1000
+# 	# if ipop == iipop
+# 	# if cc in popmembers[1, :]
+# 	# if !(cc in popmembers[1, :])
+# 	# 	Plots.plot!(weightsIE[cc, 1, :])
+# 	# end
+# 	if !(cc in popmembers[1, :])
+# 		plot_data[1, :] += sum(weightsIE[cc, 1, :])
+# 	end
+# 	# end
+# end
+# # end
+# # Plots.plot!(legend=false)
+# Plots.plot!(plot_data, legend=false)
+
+
+
+# This is E-assemblies➡I2  
+Plots.plot()
+ipop = 2
+for cc = 1:250
+	if (cc+4750) in ipopmembers[ipop, :]
+		Plots.plot!(weightsEI[cc, ipop, :])
+	end
+end
+Plots.plot!(legend=false)
+
+
+
+# This is I1➡E-assemblies
+Plots.plot()
+ipop = 18
+for cc = 1:750
+	if cc in popmembers[ipop, :]
+		Plots.plot!(weightsIE[cc, ipop, :] ./ popmemlen[ipop])
+	end
+end
+Plots.plot!(legend=false)
+
+
+
+# This is I2➡E-assemblies
+Plots.plot()
+ipop = 1
+for cc = 751:1000
+	if cc in popmembers[ipop, :]
+		Plots.plot!(weightsIE[cc, ipop, :] ./ popmemlen[ipop])
+	end
+end
+Plots.plot!(legend=false)
+
+
+
+
+# This is I2➡E-assemblies (average)
+Plots.plot()
+# ipop = 1
+for ipop = 1:20
+	Plots.plot!(vec(mean(weightsEI[:, ipop, :], dims=1)))
+end
+Plots.plot!(legend=false)
 
 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ________________________________________________________________________
 T = 8_000
 stim = [1. 1001 1030 8; 1 1201 1230 8; 1 1401 1430 8; 1 1601 1630 8; 1 1801 1830 8;
 		5 2001 2030 8; 5 2201 2230 8; 5 2401 2430 8; 5 2601 2630 8; 5 2801 2830 8;
@@ -51,8 +204,8 @@ end
 
 
 for i = 1:20
+	perm = sortperm(i_structs[2, :], rev=true)
 	if i==1
-		perm = sortperm(i_structs[i, :], rev=true)
 		Plots.plot(i_structs[i, perm])
 		# Plots.plot(sort(i_structs[i, :], rev=true))
 		# Plots.plot(i_structs[i, :])
@@ -63,7 +216,7 @@ for i = 1:20
 	end
 end
 
-Plots.plot!()
+Plots.plot!(legend=false)
 
 
 

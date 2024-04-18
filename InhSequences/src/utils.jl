@@ -103,7 +103,7 @@ function findI2populations(weights, Npop, popmembers; iipop_len=25)
 	ipopmembers = zeros(Npop, iipop_len)
 	for ipop = 1:Npop
 	    members = filter(i->(i>0), popmembers[ipop, :])    			# Get members of excitatory assembly
-	    ie_weights = vec(sum(weights[members, 4501:5000], dims=1))  # Get sum of all weights projected from each E-assemble to each 2nd ipopulation neuron
+	    ie_weights = vec(sum(weights[members, 4751:5000], dims=1))  # Get sum of all weights projected from each E-assemble to each 2nd ipopulation neuron
 		x = sortperm(ie_weights)[(end-iipop_len+1):end]             # Get a permutation for the shorted summed weights
 	    ind = 1
 	    for ii in x
@@ -111,6 +111,6 @@ function findI2populations(weights, Npop, popmembers; iipop_len=25)
             ind += 1
 	    end
 	end
-	ipopmembers = convert(Array{Int,2}, ipopmembers .+ 4500)
+	ipopmembers = convert(Array{Int,2}, ipopmembers .+ 4750)
 	return ipopmembers
 end
