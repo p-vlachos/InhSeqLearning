@@ -8,9 +8,10 @@ using HDF5
 include("quantification.jl")
 
 load = true
-doplot = load
+doplot = false
 loadtrained = load
-savenet = !load
+# savenet = !load
+savenet = true
 
 # load = true
 # doplot = false
@@ -24,8 +25,7 @@ savenet = !load
 
 # for sim_num = 1:20
 
-for sim_num = 4:10#20
-	# stim = zeros(1, 4)						# Spontaneous activity (no stimulation)
+for sim_num = 1:10#20
 	if !load
 		T = 2_000_000
 		stim = make_seq(5, 20, seq_len=4)		# Full train 5 sequences
@@ -33,25 +33,31 @@ for sim_num = 4:10#20
 		# T = 20_000
 		# stim = make_seq(1, 10, seq_len=10)		# Full train 5 sequences
 	else
-		T = 20_000
-		stim = [1. 1001 1030 8; 1 1201 1230 8; 1 1401 1430 8; 1 1601 1630 8; 1 1801 1830 8;
+		T = 50_000
+		stim = zeros(4, 25)						# Spontaneous activity (no stimulation)
+		stim .= [1 1001 1030 8; 1 1201 1230 8; 1 1401 1430 8; 1 1601 1630 8; 1 1801 1830 8;
 				5 2001 2030 8; 5 2201 2230 8; 5 2401 2430 8; 5 2601 2630 8; 5 2801 2830 8;
 				9 3001 3030 8; 9 3201 3230 8; 9 3401 3430 8; 9 3601 3630 8; 9 3801 3830 8;
 				13 4001 4030 8; 13 4201 4230 8; 13 4401 4430 8; 13 4601 4630 8; 13 4801 4830 8;
-				17 5001 5030 8; 17 5201 5230 8; 17 5401 5430 8; 17 5601 5630 8; 17 5801 5830 8]
+				17 5001 5030 8; 17 5201 5230 8; 17 5401 5430 8; 17 5601 5630 8; 17 5801 5830 8]'
+		# stim .= transpose(stim)
 	end
 	# stim = make_seq(1, 20, seq_len=20)	# Single sequence
 
 	sim_name = string("network_", sim_num,".h5")
-	sim_savepath = "./networks_trained/"
+	sim_savedpath = "./networks_trained/" 
+	sim_savepath = "./networks_trained_spontaneous/"
 	output_dir = "./output_trained/"
 
 	if loadtrained
-		fid = h5open(joinpath(sim_savepath, sim_name), "r")
-		popmembers = read(fid["data"]["popmembers"])
+		fid = h5open(joinpath(sim_savedpath, sim_name), "r")
+		popmembers_old = read(fid["data"]["popmembers"])
 		weights_old = read(fid["data"]["weights"])
 		close(fid)
-		times, ns, Ne, Ncells, T, new_weights = sim(stim, weights_old, popmembers, T)
+
+		popmembers = zeros(size(popmembers_old'))
+		popmembers .= popmembers_old'
+		times, ns, Ne, Ncells, T, new_weights, weightsEE, weightsIE, weightsEI, popmembers = sim(stim, weights_old, popmembers, T)
 
 		Nmaxmembers = 300
 		Ni2 = 750
@@ -120,7 +126,7 @@ for sim_num = 4:10#20
 			end
 
 			(!ispath(sim_outDir)) && (mkpath(sim_outDir))
-			savefig(string(sim_outDir, "network_original_", sim_num,".png"), dpi=150)
+			savefig(string(sim_outDir, "network_original_", sim_num,"_spontaneous.png"), dpi=150)
 			print("\rDone creating plot\n")
 			PyPlot.clf()
 		end
@@ -137,7 +143,7 @@ for sim_num = 4:10#20
 
 	if savenet
 		(!ispath(sim_savepath)) && (mkpath(sim_savepath))
-		cd("networks_trained")
+		cd("networks_trained_spontaneous")
 		# cd("networks")
 		if loadtrained
 			fid = h5open(string(sim_name, "_rest.h5"), "w")
@@ -154,6 +160,6 @@ for sim_num = 4:10#20
 		cd("..")
 	end
 
-	println("mean excitatory firing rate: ", mean(1000 * ns[1:Ne] / T), " Hz")
-	println("mean inhibitory firing rate: ", mean(1000 * ns[(Ne + 1):Ncells] / T), " Hz")
+	@info string("mean excitatory firing rate: ", mean(1000 * ns[1:Ne] / T), " Hz")
+	@info string("mean inhibitory firing rate: ", mean(1000 * ns[(Ne + 1):Ncells] / T), " Hz")
 end

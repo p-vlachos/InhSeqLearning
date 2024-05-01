@@ -84,7 +84,7 @@ end
 @with_kw struct SimulationParameters
     dt::Float64 = .1            # Integration timestep (ms)
     dtnormalize::Int64 = 20 	# How often to normalize rows of EE weights (ms)
-	stdpdelay::Int64 = 10000 	# Time before stdp is activated, to allow transients to die out (ms)
+	stdpdelay::Int64 = 100000 	# Time before stdp is activated, to allow transients to die out (ms)
 	Nspikes::Int64 = 10000	 	# Maximum number of spikes to record per neuron
 end
 

@@ -27,14 +27,14 @@ function simnew(stim::Matrix{Float64}, T::Int64)
 	weights[diagind(weights)] .= 0.
 
 	# --- Populations ---
-	Npop::Int64 = maximum(Int, stim[:, 1])	# Number of assemblies
-	popmembers::Matrix{Int64} = zeros(Int, Npop, Nmaxmembers)	# Contains indexes of neurons for each population
+	Npop::Int64 = maximum(Int, stim[1, :])	# Number of assemblies
+	popmembers::Matrix{Int64} = zeros(Int, Nmaxmembers, Npop)	# Contains indexes of neurons for each population
 	@simd for pp = 1:Npop
 		members::Vector{Int64} = findall(rand(Ne) .< pmembership)
-		popmembers[pp, 1:length(members)] = members
+		popmembers[1:length(members), pp] = members
 	end
 	
-	return sim(stim, weights, popmembers, T), popmembers
+	return sim(stim, weights, popmembers, T)
 end
 
 
@@ -95,6 +95,7 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 	gi::Float64 = 0.
 	spiked::BitVector = falses(Ncells)
 	indx::Int64 = 0.
+	stim_size::Int64 = size(stim)[2]
 
 	expdist = Exponential()
 
@@ -124,7 +125,7 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 
 	# --- TRACKERS ---
 	tracker_indx::Int64 = 1
-	Npop::Int64 = maximum(Int, stim[:, 1])	# Number of assemblies
+	Npop::Int64 = maximum(Int, stim[1, :])	# Number of assemblies
 	tracker = Tracker(T=T, Ni=Ni, Ni2=Ni2, Npop=Npop, tracker_dt=round(Int, T/10_000))
 	@unpack tracker_dt, weightsEE, weightsEI, weightsIE = tracker
 	tracker_dt /= dt
@@ -132,7 +133,8 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 	@info "Starting simulation"
 	# --- Begin main simulation loop ---
 	iterSteps = ProgressBar(1:Nsteps)
-	@inbounds @fastmath for tt in iterSteps
+	# @inbounds @fastmath 
+	for tt in iterSteps
 		
 		t = dt * tt
 		tprev = dt * (tt - 1)
@@ -141,19 +143,21 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 		@. forwardInputsI = 0.
 
 		# Check if we have entered or exited a stimulation period
-		for ss = 1:size(stim)[1]
-			if (tprev < stim[ss, 2]) && (t >= stim[ss, 2])	# Just entered stimulation period
-				ipop = round(Int, stim[ss, 1])
-				for ii = 1:Nmaxmembers
-					(popmembers[ipop, ii] == 0 || popmembers[ipop, ii] == -1) && break
-					rx[popmembers[ipop, ii]] += stim[ss, 4]	# Add external drive
+		for ss = 1:stim_size
+			if (tprev < stim[2, ss]) && (t >= stim[2, ss])	# Just entered stimulation period
+				ipop = round(Int, stim[1, ss])
+				@simd for ii = 1:Nmaxmembers
+					# (popmembers[ipop, ii] == 0 || popmembers[ipop, ii] == -1) && break
+					# rx[popmembers[ipop, ii]] += stim[ss, 4]	# Add external drive
+					!(popmembers[ii, ipop] == 0 || popmembers[ii, ipop] == -1) && (rx[popmembers[ii, ipop]] += stim[4, ss])	# Add external drive
 				end
 			end
-			if (tprev < stim[ss, 3]) && (t >= stim[ss, 3]) 	# Just exited stimulation period
-				ipop = round(Int, stim[ss, 1])
-				for ii = 1:Nmaxmembers
-					(popmembers[ipop, ii] == 0 || popmembers[ipop, ii] == -1) && break
-					rx[popmembers[ipop, ii]] -= stim[ss, 4]	# Subtract external drive
+			if (tprev < stim[3, ss]) && (t >= stim[3, ss]) 	# Just exited stimulation period
+				ipop = round(Int, stim[1, ss])
+				@simd for ii = 1:Nmaxmembers
+					# (popmembers[ipop, ii] == 0 || popmembers[ipop, ii] == -1) && break
+					# rx[popmembers[ipop, ii]] -= stim[ss, 4]	# Subtract external drive
+					!(popmembers[ii, ipop] == 0 || popmembers[ii, ipop] == -1) && (rx[popmembers[ii, ipop]] -= stim[ss, 4])	# Subtract external drive
 				end
 			end
 		end  # End loop over stimuli
@@ -291,7 +295,7 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 			end	# End, iSTDP₁
 
 			# _____ iSTDP₂ _____
-			if spiked[cc] && (t > stdpdelay) && (t < stim[end, 3])
+			if spiked[cc] && (t > stdpdelay) && (t < stim[3, end])
 				if cc <= Ne
 					# Excitatory neuron fired, modify inputs from 2nd i-population
 					for dd = (Ncells - Ni2 + 1):Ncells
@@ -310,7 +314,7 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 			end # End, iSTDP₂
 
 			#  _____ eiSTDP _____
-			if spiked[cc] && (t > stdpdelay) && (t < stim[end,3])
+			if spiked[cc] && (t > stdpdelay) && (t < stim[3, end])
 				if cc <= Ne
 					# Excitatory neuron fired, modify outputs to 2nd i-population
 					for dd = (Ncells-Ni2+1):Ncells
@@ -361,9 +365,9 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 		# --- TRACKERS ---
 		if mod(tt-1, tracker_dt) == 0
 			for ipop = 1:Npop
-				pmembers = filter(i->i>0, popmembers[ipop, :])
+				pmembers = filter(i->i>0, popmembers[:, ipop])
 				for iipop = 1:Npop					
-					ppmembers = filter(i->i>0, popmembers[iipop, :])
+					ppmembers = filter(i->i>0, popmembers[:, ipop])
 					weightsEE[iipop, ipop, tracker_indx] = sum(weights[ppmembers, pmembers])
 				end
 				for cc = 1:Ni
@@ -380,5 +384,5 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 	print("\r")
 	times = times[:, 1:maximum(ns)]
 
-	return times, ns, Ne, Ncells, T, weights, weightsEE, weightsIE, weightsEI
+	return times, ns, Ne, Ncells, T, weights, weightsEE, weightsIE, weightsEI, popmembers
 end
