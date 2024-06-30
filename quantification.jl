@@ -789,18 +789,18 @@ end
 #     return rate
 # end
 
-function convolveSpikes(spikeTimes; interval::AbstractVector, tau=100)
-    Npop = size(spikeTimes)[1]
-    rate = zeros(Npop, length(interval))
-    for ipop = 1:Npop
-        for t0 in filter(i->(i>0), spikeTimes[ipop, :])
-            x = alpha_fun.(interval, t0=t0, tau=tau)
-            x[isnan.(x)] .= 0.
-            rate[ipop, :] .+= x
-        end
-    end
-    return rate
-end
+# function convolveSpikes(spikeTimes; interval::AbstractVector, tau=100)
+#     Npop = size(spikeTimes)[1]
+#     rate = zeros(Npop, length(interval))
+#     for ipop = 1:Npop
+#         for t0 in filter(i->(i>0), spikeTimes[ipop, :])
+#             x = alpha_fun.(interval, t0=t0, tau=tau)
+#             x[isnan.(x)] .= 0.
+#             rate[ipop, :] .+= x
+#         end
+#     end
+#     return rate
+# end
 
 function getAssemblySpikes1(rates, popmembers, ipopmembers; Npop=20)
     T = size(rates)[2]

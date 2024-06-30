@@ -33,13 +33,13 @@ for sim_num = 1:10#20
 		# T = 20_000
 		# stim = make_seq(1, 10, seq_len=10)		# Full train 5 sequences
 	else
-		T = 50_000
-		stim = zeros(4, 25)						# Spontaneous activity (no stimulation)
-		stim .= [1 1001 1030 8; 1 1201 1230 8; 1 1401 1430 8; 1 1601 1630 8; 1 1801 1830 8;
-				5 2001 2030 8; 5 2201 2230 8; 5 2401 2430 8; 5 2601 2630 8; 5 2801 2830 8;
-				9 3001 3030 8; 9 3201 3230 8; 9 3401 3430 8; 9 3601 3630 8; 9 3801 3830 8;
-				13 4001 4030 8; 13 4201 4230 8; 13 4401 4430 8; 13 4601 4630 8; 13 4801 4830 8;
-				17 5001 5030 8; 17 5201 5230 8; 17 5401 5430 8; 17 5601 5630 8; 17 5801 5830 8]'
+		T = 100_000
+		stim = zeros(4, 20)						# Spontaneous activity (no stimulation)
+		# stim .= [1 1001 1030 8; 1 1201 1230 8; 1 1401 1430 8; 1 1601 1630 8; 1 1801 1830 8;
+		# 		5 2001 2030 8; 5 2201 2230 8; 5 2401 2430 8; 5 2601 2630 8; 5 2801 2830 8;
+		# 		9 3001 3030 8; 9 3201 3230 8; 9 3401 3430 8; 9 3601 3630 8; 9 3801 3830 8;
+		# 		13 4001 4030 8; 13 4201 4230 8; 13 4401 4430 8; 13 4601 4630 8; 13 4801 4830 8;
+		# 		17 5001 5030 8; 17 5201 5230 8; 17 5401 5430 8; 17 5601 5630 8; 17 5801 5830 8]'
 		# stim .= transpose(stim)
 	end
 	# stim = make_seq(1, 20, seq_len=20)	# Single sequence
@@ -55,8 +55,8 @@ for sim_num = 1:10#20
 		weights_old = read(fid["data"]["weights"])
 		close(fid)
 
-		popmembers = zeros(size(popmembers_old'))
-		popmembers .= popmembers_old'
+		popmembers = zeros(Int, size(popmembers_old'))
+		popmembers .= round.(Int, popmembers_old')
 		times, ns, Ne, Ncells, T, new_weights, weightsEE, weightsIE, weightsEI, popmembers = sim(stim, weights_old, popmembers, T)
 
 		Nmaxmembers = 300
@@ -146,7 +146,7 @@ for sim_num = 1:10#20
 		cd("networks_trained_spontaneous")
 		# cd("networks")
 		if loadtrained
-			fid = h5open(string(sim_name, "_rest.h5"), "w")
+			fid = h5open(string(sim_name, "_spontaneous.h5"), "w")
 		else
 			fid = h5open(sim_name,"w")
 		end
@@ -156,6 +156,7 @@ for sim_num = 1:10#20
 		g["weightsEE"] = weightsEE
 		g["weightsEI"] = weightsEI
 		g["weightsIE"] = weightsIE
+		g["times"] = times
 		close(fid)
 		cd("..")
 	end

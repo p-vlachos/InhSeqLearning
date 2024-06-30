@@ -96,6 +96,6 @@ end
 	tracker_dt::Float64
 	Nsteps::Int64 = round(Int, T/tracker_dt)
 	weightsEE::Array{Float64, 3} = zeros(Npop, Npop, Nsteps)	# E-to-E
-	weightsEI::Array{Float64, 3} = zeros(Ni2, Npop, Nsteps)		# E-to-I
+	weightsEI::Array{Float64, 3} = zeros(Ni2, Npop, Nsteps)		# E-to-I2
 	weightsIE::Array{Float64, 3} = zeros(Ni, Npop, Nsteps)		# I-to-E
 end

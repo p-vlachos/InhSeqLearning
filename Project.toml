@@ -1,4 +1,5 @@
 [deps]
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 InhSequences = "cd0943a4-5c5d-486b-9e63-63a337df0f09"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"

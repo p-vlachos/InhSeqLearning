@@ -100,17 +100,70 @@ end
 
 function findI2populations(weights, Npop, popmembers; iipop_len=25)
 	#	Finds the most highly connected assemblies from E to 2nd i-population (fixed length)
-	ipopmembers = zeros(Npop, iipop_len)
+	ipopmembers = zeros(iipop_len, Npop)
 	for ipop = 1:Npop
-	    members = filter(i->(i>0), popmembers[ipop, :])    			# Get members of excitatory assembly
+	    members = filter(i->(i>0), popmembers[:, ipop])    			# Get members of excitatory assembly
 	    ie_weights = vec(sum(weights[members, 4751:5000], dims=1))  # Get sum of all weights projected from each E-assemble to each 2nd ipopulation neuron
 		x = sortperm(ie_weights)[(end-iipop_len+1):end]             # Get a permutation for the shorted summed weights
 	    ind = 1
 	    for ii in x
-            ipopmembers[ipop, ind] = ii # Find and store the iipop_len neurons with the lowest summed values
+            ipopmembers[ind, ipop] = ii # Find and store the iipop_len neurons with the lowest summed values
             ind += 1
 	    end
 	end
 	ipopmembers = convert(Array{Int,2}, ipopmembers .+ 4750)
 	return ipopmembers
 end
+
+Θ(x::Float64) = x > 0. ? x : 0.
+function alpha_fun(t; t0::Float64, tau::Float64=100.)
+    (abs(t - t0)/ tau > 10) && (return 0.)
+    return (t-t0) / tau * exp(1 - (t - t0) / tau) * Θ(1. * (t - t0))
+end
+
+function gaussian_fun(interval::AbstractVector; t0::Float64, sigma::Float64=5.)
+    rate::Vector{Float64} = zeros(length(interval))
+    sum::Float64 = 0.
+    for t = 1:length(interval)
+        rate[t] = exp(-0.5 * ((t - t0) / sigma)^2)
+        sum += rate[t]
+    end
+    return rate# ./= sum  # Normalize
+end
+
+function convolveSpikes(spikeTimes::Matrix{Float64}; interval::AbstractVector, sigma::Float64=5., gaussian::Bool=true)
+	Ncells::Int64 = size(spikeTimes)[1]
+	rate::Matrix = zeros(Ncells, length(interval))
+	for cc = 1:Ncells
+		for t0 in filter(i->(i>0), spikeTimes[cc, :])
+			(gaussian) ? (x = gaussian_fun(interval, t0=t0, sigma=sigma)) : (x = alpha_fun.(interval, t0=t0, tau=sigma))
+			x[isnan.(x)] .= 0.
+			rate[cc, :] .+= x
+		end
+	end
+	return rate
+end
+
+function getPopulationRates(spikeTimes::Matrix{Float64}, popmembers::Matrix{Int64}; interval::AbstractVector, sigma::Float64=5., gaussian=true)
+	Npop::Int64 = size(popmembers)[2]
+	rates::Matrix{Float64} = zeros(length(interval), Npop)
+	for ipop = 1:Npop
+		rates[:, ipop] = mean(convolveSpikes(spikeTimes[filter(i->(i>0), popmembers[:, ipop]), :], interval=interval, sigma=sigma, gaussian=gaussian), dims=1)
+	end
+	return rates
+end
+
+
+# ---------- OLD FUNCTIONS -----------
+# function times2spikes(times::Matrix{Float64})
+# 	Ncells::Int64 = size(times)[1]
+# 	spikes::Matrix{Int64} = zeros(Ncells, round(Int, maximum(times)))
+# 	for cc = 1:Ncells
+# 		for tt in times[1, :]
+# 			(tt == 0) && (continue)
+# 			t = round(Int, tt)
+# 			spikes[cc, t] += 1
+# 		end
+# 	end
+# 	return spikes	
+# end
