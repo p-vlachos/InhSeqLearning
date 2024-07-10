@@ -97,8 +97,33 @@ function make_stim_seq(Nstim, Npres; stim_rate=8, seq_len=4, overlap=0, randomiz
 	return stim
 end
 
+function makeSeqStim(T::Int64; stim_rate::Float64=8., seq_len::Int64=4, seq_num::Int64=5, randomize=true)
+	# Create sequences of stimuli
+	stim_delay::Float64 = 1_000 	# Should be greater than or equal to 'stdpdelay' (ms)
+	stim_duration::Float64 = 30 	# Stimulation period for each assembly (ms)
+	stim_interval::Float64 = 200	# Interval between each assembly stimulation (ms)
 
-function findI2populations(weights, Npop, popmembers; iipop_len=25)
+	Nstim::Int64 = convert(Int, seq_len*seq_num)
+	Ntotal::Int64 = round(Int, (T-stim_delay)/stim_interval)
+	stim::Matrix{Float64} = zeros(Ntotal, 4)
+
+	# Create the stimulus
+	stim[1, :] = [1.0, stim_delay, stim_delay+stim_duration, stim_rate]
+	for i = 2:Ntotal
+		stim[i, 1] = mod(stim[i-1, 1] + seq_len, Nstim)
+		stim[i, 2] = stim[i-1, 2] + stim_interval
+		stim[i, 3] = stim[i, 2] + stim_duration
+		stim[i, 4] = stim_rate
+	end
+
+	# Randomize the order of stimulation
+	if randomize
+		stim = stim[randperm(Ntotal), :]
+	end
+	return stim
+end
+
+function findI2populations(weights::Matrix{Float64}, Npop::Int64, popmembers; iipop_len=25)
 	#	Finds the most highly connected assemblies from E to 2nd i-population (fixed length)
 	ipopmembers = zeros(iipop_len, Npop)
 	for ipop = 1:Npop
