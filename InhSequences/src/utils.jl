@@ -153,7 +153,7 @@ function gaussian_fun(interval::AbstractVector; t0::Float64, sigma::Float64=5.)
         rate[t] = exp(-0.5 * ((t - t0) / sigma)^2)
         sum += rate[t]
     end
-    return rate# ./= sum  # Normalize
+    return rate ./= sum  # Normalize
 end
 
 function convolveSpikes(spikeTimes::Matrix{Float64}; interval::AbstractVector, sigma::Float64=5., gaussian::Bool=true)
@@ -166,7 +166,7 @@ function convolveSpikes(spikeTimes::Matrix{Float64}; interval::AbstractVector, s
 			rate[cc, :] .+= x
 		end
 	end
-	return rate
+	return rate .* 1000 # Convert to Hz
 end
 
 function getPopulationRates(spikeTimes::Matrix{Float64}, popmembers::Matrix{Int64}; interval::AbstractVector, sigma::Float64=5., gaussian=true)

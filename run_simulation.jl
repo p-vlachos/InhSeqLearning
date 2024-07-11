@@ -2,7 +2,6 @@ using Pkg
 Pkg.activate(".")
 using InhSequences
 using Statistics
-using PyPlot
 using HDF5
 
 include("quantification.jl")
@@ -70,72 +69,7 @@ for sim_num = 7:10 #20
 		overlap_limit = 20
 		Npop == 9 ? seq_length = 3 : seq_length = 4
 
-
 		sim_outDir = string(output_dir, "/sim_", sim_num,"/")
-
-		if doplot
-			Npop = size(popmembers, 1)
-			Nmaxmembers = size(popmembers, 2)
-			ipopsize = 25
-			ipopmembers = findI2populations(new_weights, Npop, popmembers, iipop_len=ipopsize)
-			restcells = deleteat!(map(*, ones(Int, 4000), range(1,stop=4000)), sort(unique(popmembers))[2:end])
-			println("creating plot")
-			figure(figsize=(4, 4))
-			xlim(0, T)
-			ylim(0, sum(popmembers .> 0)+length(restcells)+500+sum(ipopmembers .> 0))
-			ylabel("Neuron")
-			xlabel("Simulation Time (ms)")
-			tight_layout()
-			# Plot raster with the order of rows determined by population membership
-			rowcount = 0
-			for pp = 1:Npop
-				print("\rpopulation ", pp)
-				for cc = 1:Nmaxmembers
-					(popmembers[pp, cc] < 1) && break
-					rowcount += 1
-					ind = popmembers[pp, cc]
-					vals = times[ind, 1:ns[ind]]
-					y = rowcount * ones(length(vals))
-					scatter(vals, y, s = .3, c="blue", marker="o", linewidths=0)
-				end
-			end
-			# Plot raster of cells not belonging to any population
-			for cc in restcells
-				rowcount += 1
-				vals = times[cc, 1:ns[cc]]
-				y = rowcount * ones(length(vals))
-				scatter(vals, y, s = .3, c="green", marker="o", linewidths=0)
-			end
-			# Plot raster for interneurons (1st i-population)
-			for cc = 4001:4750
-				rowcount += 1
-				vals = times[cc, 1:ns[cc]]
-				y = rowcount * ones(length(vals))
-				scatter(vals, y, s = .3, c="red", marker="o", linewidths=0)
-			end
-			# Plot raster for interneurons (2nd i-population)
-			for pp = 1:Npop
-				for cc = 1:ipopsize
-					rowcount += 1
-					ind = ipopmembers[pp, cc]
-					vals = times[ind, 1:ns[ind]]
-					y = rowcount * ones(length(vals))
-					scatter(vals, y, s = .3, c="red", marker="o", linewidths=0)
-				end
-			end
-
-			(!ispath(sim_outDir)) && (mkpath(sim_outDir))
-			savefig(string(sim_outDir, "network_original_", sim_num,"_spontaneous.png"), dpi=150)
-			print("\rDone creating plot\n")
-			PyPlot.clf()
-		end
-
-		if doplot
-			(!ispath(sim_outDir)) && (mkpath(sim_outDir))
-			plot_eeWeights(new_weights, popmembers, Npop, sim_outDir)
-			plot_eiWeights(new_weights, popmembers, ipopmembers, Npop, sim_outDir)
-			plot_ieWeights(new_weights, popmembers, ipopmembers, Npop, sim_outDir)
-		end
 	else
 		((times, ns, Ne, Ncells, T, new_weights, weightsEE, weightsIE, weightsEI), popmembers) = simnew(stim, T)
 	end
