@@ -11,8 +11,9 @@ sim_savedpath = "./networks_trained/"
 loadnet = false				# Choose between simulating an existing or a novel network
 savenet = true				# Save the network after stimulation
 
-Nsimulations = 1			# Number of simulation to run
+Nsimulations = 10			# Number of simulation to run
 stim_mode = "spontaneous"	# Choose between spontaneous or brief stimulation (only for loaded networks)
+random_seeds = [2061, 5987, 3642, 9465, 1837, 6487, 3791, 6482, 6485, 9316]
 
 for sim_num = 1:Nsimulations
 	if loadnet
@@ -36,11 +37,11 @@ for sim_num = 1:Nsimulations
 		weights_old = read(fid["data"]["weights"])
 		close(fid)
 
-		times, weights, popmembers, weightsEE, weightsIE, weightsEI = sim(stim, weights_old, popmembers, T)
+		times, weights, popmembers, weightsEE, weightsIE, weightsEI = sim(stim, weights_old, popmembers, T, random_seed=random_seeds[sim_num])
 		# times, weights, popmembers = sim(stim, weights_old, popmembers, T)
 	else
 		sim_savepath = string("./networks_trained/")
-		times, weights, popmembers, weightsEE, weightsIE, weightsEI = simnew(stim, T)
+		times, weights, popmembers, weightsEE, weightsIE, weightsEI = simnew(stim, T, random_seed=random_seeds[sim_num])
 		# times, weights, popmembers = simnew(stim, T)
 	end
 
@@ -64,19 +65,3 @@ for sim_num = 1:Nsimulations
 		cd("..")
 	end
 end
-
-
-
-########
-
-sim_name = string("network_1.h5")
-
-fid = h5open(joinpath(sim_savedpath, sim_name), "r")
-popmembers_old = read(fid["data"]["popmembers"])
-weights_old = read(fid["data"]["weights"])
-
-weightsEE = read(fid["data"]["weightsEE"])
-weightsEI = read(fid["data"]["weightsEI"])
-weightsIE = read(fid["data"]["weightsIE"])
-close(fid)
-

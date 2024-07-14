@@ -1,3 +1,7 @@
 /output
 /networks
+/networks_trained
+/networks_trained_spontaneous
+/networks_trained_stimulation
 *.h5
+*.png

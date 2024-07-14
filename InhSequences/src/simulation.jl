@@ -2,12 +2,13 @@
 # Copyright (C) 2014 Ashok Litwin-Kumar
 # see README for more information
 
-function simnew(stim::Matrix{Float64}, T::Int64)
+function simnew(stim::Matrix{Float64}, T::Int64; random_seed::Int64=2817)
 	#  Generates new weights and populations with unpotentiated synapses, runs simulation
 
 	@info "Setting up weights"
 	@unpack Ne, Ni, Ni2, jee0, jei0, jie, ji2e, jii, jii12, jii2, p, pmembership, Nmaxmembers = InitializationParameters()
 	Ncells::Int64 = Ne + Ni
+	Random.seed!(random_seed)
 
 	# --- Set up weights ---
 	# Weights are set up so that w[i,j] is weight from presynaptic i to postsynaptic j
@@ -38,7 +39,7 @@ function simnew(stim::Matrix{Float64}, T::Int64)
 end
 
 
-function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix{Int64}, T::Int64)
+function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix{Int64}, T::Int64; random_seed::Int64=2817)
 	#  Runs the simulation given weight matrix and populations
 
 	@info "Setting up parameters..."
@@ -50,6 +51,7 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 	@unpack altd, altp, thetaltd, thetaltp, tauu, tauv, taux = PlasticityParameters()
 	@unpack tauy, eta, r0, tau_i, mi, alfa, ilamda, tau_ie, eta_ie, Adep_ie = PlasticityParameters()
 	@unpack dt, dtnormalize, stdpdelay, Nspikes = SimulationParameters()
+	Random.seed!(random_seed)
 
 	# _________________________--- Simulation ---______________________________
 	Ncells::Int64 = Ne + Ni									# Total number of neurons
