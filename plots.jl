@@ -1,9 +1,17 @@
+using Pkg
+Pkg.activate(".")
+using InhSequences
+using Statistics
+using HDF5
+
+# include("quantification.jl")
+
 using LaTeXStrings
 using CairoMakie
 using Colors
 
 ############## THIS FOR TESTING ########################
-mode = "stimulation" # "spontaneous"
+mode = "spontaneous" # "spontaneous" "stimulation"
 sim_name = string("network_7_", mode, ".h5")
 sim_savedpath = string("./networks_trained_", mode, "/")
 output_dir = "./output_testing/"
@@ -53,7 +61,7 @@ for cc = 1:Ncells
 end
 
 # Plot params
-mrksize = 1.2
+mrksize = 2.
 
 rowcount = 1
 fig = CairoMakie.Figure(resolution=(720, 480))
@@ -101,9 +109,7 @@ for pp = 1:Npop
     end
 end
 
-# (!ispath(sim_outDir)) && (mkpath(sim_outDir))
-# savefig(string(sim_outDir, "network_original_", sim_num,"_spontaneous.png"), dpi=150)
-# PyPlot.clf()
+
 
 ax_top = CairoMakie.Axis(g[1, 1], xlabel="", ylabel=L"\text{Firing rate (Hz)}", xlabelsize=20, ylabelsize=20,
                 xticks=([], []), xticklabelsize=20,
@@ -121,8 +127,25 @@ rowsize!(g, 1, Relative(1/5))
 
 fig
 
+
+
+
+
+
+(!ispath(output_dir)) && (mkpath(output_dir))
+savefig(string(output_dir, "test_plot_1_sim_", sim_num,"_spontaneous.png"), dpi=150)
+PyPlot.clf()
+
+
+
+
+
+
+
+
+
 if doplot
-    (!ispath(sim_outDir)) && (mkpath(sim_outDir))
+    (!ispath(output_dir)) && (mkpath(output_dir))
     plot_eeWeights(new_weights, popmembers, Npop, sim_outDir)
     plot_eiWeights(new_weights, popmembers, ipopmembers, Npop, sim_outDir)
     plot_ieWeights(new_weights, popmembers, ipopmembers, Npop, sim_outDir)

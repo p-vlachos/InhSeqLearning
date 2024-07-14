@@ -13,6 +13,7 @@ module InhSequences
     include("utils.jl")
 
     export simnew, sim
-    export make_seq, make_stim, findI2populations, convolveSpikes, getPopulationRates, makeSeqStim
+    export makeStim, makeStimSeq, makeStimSeq_brief
+    export findI2populations, convolveSpikes, getPopulationRates
     export NeuronalParams, SynapticParams, PlasticityParams
 end # module InhSequences

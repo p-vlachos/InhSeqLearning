@@ -6,10 +6,10 @@
 	jee0::Float64 = 2.86 	    # Initial E➡E strength (pF)
 	jei0::Float64 = 48.7    	# Initial I➡E strength (pF)
 	jie::Float64 = 1.27 	    # Initial E➡I1 strength (pF)
-	ji2e::Float64 = 1.52 	    # Initial E➡I2 strength (pF)
+	ji2e::Float64 = 1.27#1.52 	    # Initial E➡I2 strength (pF)
 	jii::Float64 = 16.2 	    # I1➡I1 & I2➡I1 strength (not plastic; pF)
 	jii12::Float64 = 24.3	    # I1➡I2 strength (not plastic; pF)
-	jii2::Float64 = 32.4	    # I2➡I2 strength (not plastic; pF)
+	jii2::Float64 = 30#32.4	    # I2➡I2 strength (not plastic; pF)
 	p::Float64 = 0.2		    # Connection probability
 	pmembership::Float64 = .05  # Probability of a neuron to belong to any assembly
 	Nmaxmembers::Int64 = 300  	# Maximum number of neurons in a population (to set size of matrix)
@@ -84,8 +84,8 @@ end
 @with_kw struct SimulationParameters
     dt::Float64 = .1            # Integration timestep (ms)
     dtnormalize::Int64 = 20 	# How often to normalize rows of EE weights (ms)
-	stdpdelay::Int64 = 100000 	# Time before stdp is activated, to allow transients to die out (ms)
-	Nspikes::Int64 = 10000	 	# Maximum number of spikes to record per neuron
+	stdpdelay::Int64 = 10_000 	# Time before stdp is activated, to allow transients to die out (ms)
+	Nspikes::Int64 = 10_000	 	# Maximum number of spikes to record per neuron
 end
 
 @with_kw struct Tracker

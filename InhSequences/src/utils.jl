@@ -1,129 +1,82 @@
-function make_stim(Nstim, Npres; stim_rate=8)
+function makeStim(Npop::Int64, Npres::Int64; stim_rate::Float64=8.)
 	# Create stimuli following protocol from LKD paper
-	Ntotal = round(Int, Nstim * Npres)
-	stim = zeros(Ntotal, 4)
-	stim_delay = 10000  # Should be greater than or equal to 'stdpdelay' (ms)
-	active = 1000 		# Stimulation period for each assembly (ms)
-	inactive = 3000		# Gap between each assembly stimulation (ms)
-    stim[1, :] = [1 , stim_delay, stim_delay+active, stim_rate]
-
-	for i = 2:Ntotal
-		stim[i, 1] = mod(i - 1, Nstim) + 1
-		stim[i, 2] = stim_delay + ((i - 1) * (active + inactive))
-		stim[i, 3] = stim[i, 2] + active
-		stim[i, 4] = stim_rate
+	Ntotal::Int64 = Npop * Npres
+	stim::Matrix{Float64} = zeros(4, Ntotal)
+	stim_delay::Float64 = 10_000.	# Should be greater than or equal to 'stdpdelay' (ms)
+	active::Float64 = 1_000. 		# Stimulation period for each assembly (ms)
+	inactive::Float64 = 3_000.		# Gap between each assembly stimulation (ms)
+    stim[:, 1] = [1., stim_delay, stim_delay+active, stim_rate]
+	for ipop = 2:Ntotal
+		stim[1, ipop] = mod(ipop - 1, Npop) + 1
+		stim[2, ipop] = stim_delay + ((ipop - 1) * (active + inactive))
+		stim[3, ipop] = stim[2, ipop] + active
+		stim[4, ipop] = stim_rate
 	end
-	stim[:, 1] = stim[shuffle(1:Ntotal), 1]
+	stim[1, :] = stim[1, shuffle(1:Ntotal)]
 	return stim
 end
 
-function make_seq(Nseq, Npres; seq_len=3, stim_rate=8, overlap=0, randomize=true)
+function makeStimSeq(Nseq::Int64, Npres::Int64; seq_len::Int64=4, stim_rate::Float64=8., overlap::Float64=0., randomize::Bool=true)
 	# Create sequences of stimuli
-	Nstim = convert(Int, Nseq*seq_len)
-	Ntotal = round(Int, Nstim * Npres)
-	stim = zeros(Ntotal, 4)
-	stim_delay = 10000  # Should be greater than or equal to 'stdpdelay' (ms)
-	active = 1000 		# Stimulation period for each assembly (ms)
-	inactive = 3000		# Gap between each assembly stimulation (ms)
-	stim[1, :] = [1.0, stim_delay, stim_delay + active, stim_rate]
+	# NOTE: "overlap" parameter might not work properly (haven't tested it)
+	Nstim::Int64 = Nseq * seq_len
+	Ntotal::Int64 = Nstim * Npres
+	stim::Matrix{Float64} = zeros(4, Ntotal)
+	stim_delay::Float64 = 10_000.  	# Should be greater than or equal to 'stdpdelay' (ms)
+	active::Float64 = 1_000. 		# Stimulation period for each assembly (ms)
+	inactive::Float64 = 3_000.		# Gap between each assembly stimulation (ms)
+	stim[:, 1] = [1.0, stim_delay, stim_delay + active, stim_rate]
 
-	for i = 2:Ntotal
-		stim[i, 1] = mod(i - 1, Nstim) + 1
+	for ipop = 2:Ntotal
+		stim[1, ipop] = mod(ipop - 1, Nstim) + 1
 		if Nseq == 1
-			stim[i, 2] = stim[i-1, 3] - overlap
-		elseif mod(i, seq_len) == 1
-			stim[i, 2] = (stim[i-1, 3] + inactive)
+			stim[2, ipop] = stim[3, ipop-1] - overlap
+		elseif mod(ipop, seq_len) == 1
+			stim[2, ipop] = (stim[3, ipop-1] + inactive)
 		else
-			stim[i, 2] = stim[i-1, 3] - overlap
+			stim[2, ipop] = stim[3, ipop-1] - overlap
 		end
-		stim[i, 3] = stim[i, 2] + active
-		stim[i, 4] = stim_rate
+		stim[3, ipop] = stim[2, ipop] + active
+		stim[4, ipop] = stim_rate
 	end
 
 	if randomize
-		ind = shuffle(filter(i->mod(i, seq_len)==1, stim[:, 1]))
-		for i = 1:Ntotal
-			(mod(stim[i, 1], seq_len) == 1) ? (stim[i, 1] = pop!(ind)) : (stim[i, 1] = stim[i-1, 1] + 1)
+		ind = shuffle(filter(i->(mod(i, seq_len) == 1), stim[1, :]))
+		for ipop = 1:Ntotal
+			(mod(stim[1, ipop], seq_len) == 1) ? (stim[1, ipop] = pop!(ind)) : (stim[1, ipop] = stim[1, ipop-1] + 1)
 		end
 	end
 	return stim
 end
 
-function make_stim_seq(Nstim, Npres; stim_rate=8, seq_len=4, overlap=0, randomize=true)
-	# Create stimuli following protocol from LKD paper
-	Ntotal = round(Int, Nstim * Npres)
-	Ntotal_wSeq = round(Int, Ntotal * 2)
-	stim = zeros(Ntotal_wSeq, 4)
-	stim_delay = 10000  # Should be equal to 'stdpdelay'
-	active = 1000 		# Presentation period for each repetition (ms)
-	inactive = 3000		# Gap between stimulation (ms)
-    stim[1, :] = [1.0, stim_delay, stim_delay+active, stim_rate]
-
-	for i = 2:Ntotal
-		stim[i, 1] = mod(i - 1, Nstim) + 1
-		stim[i, 2] = stim_delay + ((i - 1) * (active + inactive))
-		stim[i, 3] = stim[i, 2] + active
-		stim[i, 4] = stim_rate
-	end
-	stim[1:Ntotal, 1] = stim[shuffle(1:Ntotal), 1]
-
-	# Add sequences of stimuli
-	seq_delay = (stim[Ntotal, 3] + 50000)  # Resting period post non-sequential training
-	active = 1000 		# Presentation period for each repetition (ms)
-	inactive = 3000		# Gap between stimulation (ms)
-	stim[Ntotal+1, :] = [1.0, seq_delay, seq_delay + active, stim_rate]
-
-	for i = (Ntotal + 2):Ntotal_wSeq
-		stim[i, 1] = mod(i - 1, Nstim) + 1
-		if mod(i, seq_len) == 1
-			stim[i, 2] = (stim[i-1, 3] + inactive)
-		else
-			stim[i, 2] = stim[i-1, 3] - overlap
-		end
-		stim[i, 3] = stim[i, 2] + active
-		stim[i, 4] = stim_rate
-	end
-
-	if randomize
-		ind = shuffle(filter(i->mod(i, seq_len)==1, stim[:, 1]))
-		for i = Ntotal:Ntotal_wSeq
-			if mod(stim[i, 1], seq_len) == 1
-				stim[i, 1] = pop!(ind)
-			else
-				stim[i, 1] = stim[i-1, 1] + 1
-			end
-		end
-	end
-	return stim
-end
-
-function makeSeqStim(T::Int64; stim_rate::Float64=8., seq_len::Int64=4, seq_num::Int64=5, randomize=true)
+function makeStimSeq_brief(T::Int64; Npop::Int64=20, stim_rate::Float64=8., seq_len::Int64=4, seq_num::Int64=5, randomize=true)
 	# Create sequences of stimuli
-	stim_delay::Float64 = 1_000 	# Should be greater than or equal to 'stdpdelay' (ms)
-	stim_duration::Float64 = 30 	# Stimulation period for each assembly (ms)
-	stim_interval::Float64 = 200	# Interval between each assembly stimulation (ms)
+	stim_delay::Float64 = 1_000. 	# Should be greater than or equal to 'stdpdelay' (ms)
+	stim_duration::Float64 = 30. 	# Stimulation period for each assembly (ms)
+	stim_interval::Float64 = 200.	# Interval between each assembly stimulation (ms)
 
-	Nstim::Int64 = convert(Int, seq_len*seq_num)
-	Ntotal::Int64 = round(Int, (T-stim_delay)/stim_interval)
-	stim::Matrix{Float64} = zeros(Ntotal, 4)
+	Nstim::Int64 = seq_len * seq_num
+	Ntotal::Int64 = round(Int, (T - stim_delay) / stim_interval)
+	stim::Matrix{Float64} = zeros(4, Ntotal)
 
 	# Create the stimulus
-	stim[1, :] = [1.0, stim_delay, stim_delay+stim_duration, stim_rate]
-	for i = 2:Ntotal
-		stim[i, 1] = mod(stim[i-1, 1] + seq_len, Nstim)
-		stim[i, 2] = stim[i-1, 2] + stim_interval
-		stim[i, 3] = stim[i, 2] + stim_duration
-		stim[i, 4] = stim_rate
+	stim[:, 1] = [Npop, 0., 0., 0.]		# This is to ensure that the maximum number of assemblies is known by the sim
+	stim[:, 2] = [1., stim_delay, stim_delay+stim_duration, stim_rate]
+	for ipop = 3:Ntotal
+		stim[1, ipop] = mod(stim[ipop-1, 1] + seq_len, Nstim)
+		stim[2, ipop] = stim[2, ipop-1] + stim_interval
+		stim[3, ipop] = stim[2, ipop] + stim_duration
+		stim[4, ipop] = stim_rate
 	end
 
 	# Randomize the order of stimulation
 	if randomize
-		stim = stim[randperm(Ntotal), :]
+		stim = stim[:, randperm(Ntotal)]
 	end
 	return stim
 end
 
-function findI2populations(weights::Matrix{Float64}, Npop::Int64, popmembers; iipop_len=25)
+function findI2populations(weights::Matrix{Float64}, Npop::Int64, popmembers; iipop_len::Int64=27)
 	#	Finds the most highly connected assemblies from E to 2nd i-population (fixed length)
 	ipopmembers = zeros(iipop_len, Npop)
 	for ipop = 1:Npop

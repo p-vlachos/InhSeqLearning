@@ -11,7 +11,7 @@ function simnew(stim::Matrix{Float64}, T::Int64)
 
 	# --- Set up weights ---
 	# Weights are set up so that w[i,j] is weight from presynaptic i to postsynaptic j
-	weights::Matrix{Float64} = zeros(Ncells,Ncells)
+	weights::Matrix{Float64} = zeros(Ncells, Ncells)
 	weights[1:Ne, 1:Ne] .= jee0
 	@. weights[1:Ne, (Ne+1):Ncells] = jie
 
@@ -31,7 +31,7 @@ function simnew(stim::Matrix{Float64}, T::Int64)
 	popmembers::Matrix{Int64} = zeros(Int, Nmaxmembers, Npop)	# Contains indexes of neurons for each population
 	@simd for pp = 1:Npop
 		members::Vector{Int64} = findall(rand(Ne) .< pmembership)
-		popmembers[1:length(members), pp] = members
+		popmembers[1:length(members), pp] .= members
 	end
 	
 	return sim(stim, weights, popmembers, T)
@@ -125,16 +125,15 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 
 	# --- TRACKERS ---
 	tracker_indx::Int64 = 1
-	Npop::Int64 = 20#maximum(Int, stim[1, :])	# Number of assemblies
-	tracker = Tracker(T=T, Ni=Ni, Ni2=Ni2, Npop=Npop, tracker_dt=round(Int, T/10_000))
+	Npop::Int64 = maximum(Int, stim[1, :])	# Number of assemblies
+	tracker = Tracker(T=T, Ni=Ni, Ni2=Ni2, Npop=Npop, tracker_dt=round(Int, T/1_000))
 	@unpack tracker_dt , weightsEE, weightsEI, weightsIE = tracker
 	tracker_dt /= dt
 
 	@info "Starting simulation"
 	# --- Begin main simulation loop ---
 	iterSteps = ProgressBar(1:Nsteps)
-	# @inbounds @fastmath 
-	for tt in iterSteps
+	@inbounds @fastmath for tt in iterSteps
 		
 		t = dt * tt
 		tprev = dt * (tt - 1)
@@ -143,24 +142,22 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 		@. forwardInputsI = 0.
 
 		# Check if we have entered or exited a stimulation period
-		for ss = 1:stim_size
-			if (tprev < stim[2, ss]) && (t >= stim[2, ss])	# Just entered stimulation period
-				ipop = round(Int, stim[1, ss])
-				@simd for ii = 1:Nmaxmembers
-					# (popmembers[ipop, ii] == 0 || popmembers[ipop, ii] == -1) && break
-					# rx[popmembers[ipop, ii]] += stim[ss, 4]	# Add external drive
-					!(popmembers[ii, ipop] == 0 || popmembers[ii, ipop] == -1) && (rx[popmembers[ii, ipop]] += stim[4, ss])	# Add external drive
+		if t < (stim[3, end] + 1)
+			for ss = 1:stim_size
+				if (tprev < stim[2, ss]) && (t >= stim[2, ss])	# Just entered stimulation period
+					ipop = round(Int, stim[1, ss])
+					@simd for ii = 1:Nmaxmembers
+						(popmembers[ii, ipop] != 0) && (rx[popmembers[ii, ipop]] += stim[4, ss])	# Add external drive
+					end
+				end
+				if (tprev < stim[3, ss]) && (t >= stim[3, ss]) 	# Just exited stimulation period
+					ipop = round(Int, stim[1, ss])
+					@simd for ii = 1:Nmaxmembers
+						(popmembers[ii, ipop] != 0) && (rx[popmembers[ii, ipop]] -= stim[4, ss])	# Subtract external drive
+					end
 				end
 			end
-			if (tprev < stim[3, ss]) && (t >= stim[3, ss]) 	# Just exited stimulation period
-				ipop = round(Int, stim[1, ss])
-				@simd for ii = 1:Nmaxmembers
-					# (popmembers[ipop, ii] == 0 || popmembers[ipop, ii] == -1) && break
-					# rx[popmembers[ipop, ii]] -= stim[ss, 4]	# Subtract external drive
-					!(popmembers[ii, ipop] == 0 || popmembers[ii, ipop] == -1) && (rx[popmembers[ii, ipop]] -= stim[ss, 4])	# Subtract external drive
-				end
-			end
-		end  # End loop over stimuli
+		end	# End loop over stimuli
 
 		# Synaptic normalization
 		if mod(tt, inormalize) == 0
@@ -216,11 +213,11 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 			xidecay[cc] += -dt * xidecay[cc] / tauidecay + forwardInputsIPrev[cc]
 
 			if cc <= Ne
-				vth[cc] += dt * (vth0 - vth[cc]) / tauth;
-				wadapt[cc] += dt * (aw_adapt * (v[cc] - vleake) - wadapt[cc]) / tauw_adapt;
-				u_vstdp[cc] += dt * (v[cc] - u_vstdp[cc]) / tauu;
-				v_vstdp[cc] += dt * (v[cc] - v_vstdp[cc]) / tauv;
-				x_vstdp[cc] -= dt * x_vstdp[cc] / taux;
+				vth[cc] += dt * (vth0 - vth[cc]) / tauth
+				wadapt[cc] += dt * (aw_adapt * (v[cc] - vleake) - wadapt[cc]) / tauw_adapt
+				u_vstdp[cc] += dt * (v[cc] - u_vstdp[cc]) / tauu
+				v_vstdp[cc] += dt * (v[cc] - v_vstdp[cc]) / tauv
+				x_vstdp[cc] -= dt * x_vstdp[cc] / taux
 			end
 
 			if t > (lastSpike[cc] + taurefrac)  # Not in refractory period
@@ -384,5 +381,5 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 	print("\r")
 	times = times[:, 1:maximum(ns)]
 
-	return times, ns, Ne, Ncells, T, weights, weightsEE, weightsIE, weightsEI, popmembers
+	return times, weights, popmembers, weightsEE, weightsIE, weightsEI
 end
