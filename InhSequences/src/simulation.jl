@@ -128,7 +128,7 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 	# --- TRACKERS ---
 	tracker_indx::Int64 = 1
 	Npop::Int64 = maximum(Int, stim[1, :])	# Number of assemblies
-	tracker = Tracker(T=T, Ni=Ni, Ni2=Ni2, Npop=Npop, tracker_dt=round(Int, T/1_000))
+	tracker = Tracker(T=T, Ni=Ni, Ni2=Ni2, Npop=Npop, tracker_dt=round(Int, T/1_00))
 	@unpack tracker_dt , weightsEE, weightsEI, weightsIE = tracker
 	tracker_dt /= dt
 

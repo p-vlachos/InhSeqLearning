@@ -63,7 +63,7 @@ function makeStimSeq_brief(T::Int64; Npop::Int64=20, stim_rate::Float64=8., seq_
 	stim[:, 1] = [Npop, 0., 0., 0.]		# This is to ensure that the maximum number of assemblies is known by the sim
 	stim[:, 2] = [1., stim_delay, stim_delay+stim_duration, stim_rate]
 	for ipop = 3:Ntotal
-		stim[1, ipop] = mod(stim[ipop-1, 1] + seq_len, Nstim)
+		stim[1, ipop] = mod(stim[1, ipop-1] + seq_len, Nstim)
 		stim[2, ipop] = stim[2, ipop-1] + stim_interval
 		stim[3, ipop] = stim[2, ipop] + stim_duration
 		stim[4, ipop] = stim_rate
@@ -95,7 +95,7 @@ end
 
 Θ(x::Float64) = x > 0. ? x : 0.
 function alpha_fun(t; t0::Float64, tau::Float64=100.)
-    (abs(t - t0)/ tau > 10) && (return 0.)
+    (abs(t - t0) / tau > 10) && (return 0.)
     return (t-t0) / tau * exp(1 - (t - t0) / tau) * Θ(1. * (t - t0))
 end
 
@@ -119,7 +119,11 @@ function convolveSpikes(spikeTimes::Matrix{Float64}; interval::AbstractVector, s
 			rate[cc, :] .+= x
 		end
 	end
-	return rate .* 1000 # Convert to Hz
+	if gaussian
+		return rate .* 1000 # Convert to Hz
+	else
+		return rate
+	end
 end
 
 function getPopulationRates(spikeTimes::Matrix{Float64}, popmembers::Matrix{Int64}; interval::AbstractVector, sigma::Float64=5., gaussian=true)

@@ -62,22 +62,39 @@ if save_data
     cd("..")
 end
 
-## _________________________________
 
-sim_name = string("average_cross_corr.h5")
-sim_name = string("cross_corr.h5")
-sim_name = string("cross_corr_stimulation.h5")
-sim_savedpath = "./analysis_data/"
-output_dir = "./output_analysis/"
 
-fid = h5open(joinpath(sim_savedpath, sim_name), "r")
-# popmembers = read(fid["data"]["popmembers"])
-# weights = read(fid["data"]["weights"])
-crossEE = read(fid["data"]["crossEE"])
-crossEI = read(fid["data"]["crossEI"])
-crossIE = read(fid["data"]["crossIE"])
-# times = read(fid["data"]["times"])
-close(fid)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ipopmembers = findI2populations(weights, 20, popmembers, iipop_len=50)
 # ipopmembers = ipopmembers'
@@ -135,7 +152,7 @@ using CairoMakie
 using CurveFit
 
 # Load data
-activity_type = "stimulation"   # Choose between "stimulation" or "spontaneous"
+activity_type = "spontaneous"   # Choose between "stimulation" or "spontaneous"
 sim_name = string("cross_corr_", activity_type, ".h5")
 sim_savedpath = "./analysis_data/"
 output_dir = "./output_analysis/"
