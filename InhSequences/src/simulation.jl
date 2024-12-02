@@ -366,13 +366,13 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 			for ipop = 1:Npop
 				pmembers = filter(i->i>0, popmembers[:, ipop])
 				for iipop = 1:Npop					
-					ppmembers = filter(i->i>0, popmembers[:, ipop])
-					weightsEE[iipop, ipop, tracker_indx] = sum(weights[ppmembers, pmembers])
+					ppmembers = filter(i->i>0, popmembers[:, iipop])
+					weightsEE[iipop, ipop, tracker_indx] = sum(weights[ppmembers, pmembers]) / count(i->i>0, weights[ppmembers, pmembers])
 				end
 				for cc = 1:Ni
 					weightsIE[cc, ipop, tracker_indx] = sum(weights[cc+Ne, pmembers])
 					if cc > (Ni - Ni2)
-						weightsEI[(cc-(Ni-Ni2)), ipop, tracker_indx] = sum(weights[pmembers, (cc+Ne)])
+						weightsEI[(cc-(Ni-Ni2)), ipop, tracker_indx] = sum(weights[pmembers, (cc+Ne)]) / count(i->i>0, weights[pmembers, (cc+Ne)])
 					end
 				end
 			end

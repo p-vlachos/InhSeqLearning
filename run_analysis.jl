@@ -62,39 +62,154 @@ if save_data
     cd("..")
 end
 
+############################################################################################
+############################################################################################
+############################################################################################
+
+using CairoMakie
+
+labelsize = 66
+ticklabelsize = 54
+legendlabelsize = 54
+# legendticklabelsize = 54
+# colorbarlabelsize = 66
+# colorbarticklabelsize = 54
+textsize = 66
+subplotlabelsize = 66
+
+linewidth=4
+
+
+sim_name = string("network_7.h5")
+sim_savedpath = "./networks_trained/"
+output_dir = "./output_analysis/"
+
+fid = h5open(joinpath(sim_savedpath, sim_name), "r")
+popmembers = read(fid["data"]["popmembers"])
+weights = read(fid["data"]["weights"])
+weightsEE = read(fid["data"]["weightsEE"])
+weightsEI = read(fid["data"]["weightsEI"])
+weightsIE = read(fid["data"]["weightsIE"])
+# times = read(fid["data"]["times"])
+close(fid)
+
+
+
+# E-assemblies
+fig = Figure(resolution=(1080, 720))
+
+ax = CairoMakie.Axis(fig[1, 1]) #, xlabel="", ylabel="", xlabelsize=labelsize, ylabelsize=labelsize,
+            # xticks=(collect((minimum(interval)):1000:maximum(interval)), [L"0", L"1", L"2", L"3", L"4", L"5"]), xticklabelsize=ticklabelsize, xgridvisible=false,
+            # yticklabelsize=ticklabelsize, ygridvisible=false,
+            # limits=(minimum(interval), maximum(interval), 1, ylim_max))
+
+
+lines!(ax, weightsEE[1, 1, :], label="A", linewidth=linewidth)
+lines!(ax, weightsEE[5, 5, :], label="B", linewidth=linewidth)
+lines!(ax, weightsEE[9, 9, :], label="C", linewidth=linewidth)
+lines!(ax, weightsEE[13, 13, :], label="D", linewidth=linewidth)
+lines!(ax, weightsEE[17, 17, :], label="E", linewidth=linewidth)
+axislegend(ax, position=(0.99, 0.01), labelsize=30)
+
+fig
+
+
+
+
+# I1-to-E
+fig = Figure(resolution=(1080, 720))
+
+ax = CairoMakie.Axis(fig[1, 1]) #, xlabel="", ylabel="", xlabelsize=labelsize, ylabelsize=labelsize,
+            # xticks=(collect((minimum(interval)):1000:maximum(interval)), [L"0", L"1", L"2", L"3", L"4", L"5"]), xticklabelsize=ticklabelsize, xgridvisible=false,
+            # yticklabelsize=ticklabelsize, ygridvisible=false,
+            # limits=(minimum(interval), maximum(interval), 1, ylim_max))
+
+
+lines!(ax, mean(weightsIE[1:750, 1, :], dims=1)[1, :], label="A", linewidth=linewidth)
+lines!(ax, mean(weightsIE[1:750, 5, :], dims=1)[1, :], label="B", linewidth=linewidth)
+lines!(ax, mean(weightsIE[1:750, 9, :], dims=1)[1, :], label="C", linewidth=linewidth)
+lines!(ax, mean(weightsIE[1:750, 13, :], dims=1)[1, :], label="D", linewidth=linewidth)
+lines!(ax, mean(weightsIE[1:750, 17, :], dims=1)[1, :], label="E", linewidth=linewidth)
+axislegend(ax, position=(0.99, 0.01), labelsize=30)
+
+fig
+
+
+# I2-to-E
+fig = Figure(resolution=(1080, 720))
+
+ax = CairoMakie.Axis(fig[1, 1]) #, xlabel="", ylabel="", xlabelsize=labelsize, ylabelsize=labelsize,
+            # xticks=(collect((minimum(interval)):1000:maximum(interval)), [L"0", L"1", L"2", L"3", L"4", L"5"]), xticklabelsize=ticklabelsize, xgridvisible=false,
+            # yticklabelsize=ticklabelsize, ygridvisible=false,
+            # limits=(minimum(interval), maximum(interval), 1, ylim_max))
+
+
+lines!(ax, mean(weightsIE[751:1000, 1, :], dims=1)[1, :], label="A", linewidth=linewidth)
+lines!(ax, mean(weightsIE[751:1000, 5, :], dims=1)[1, :], label="B", linewidth=linewidth)
+lines!(ax, mean(weightsIE[751:1000, 9, :], dims=1)[1, :], label="C", linewidth=linewidth)
+lines!(ax, mean(weightsIE[751:1000, 13, :], dims=1)[1, :], label="D", linewidth=linewidth)
+lines!(ax, mean(weightsIE[751:1000, 17, :], dims=1)[1, :], label="E", linewidth=linewidth)
+axislegend(ax, position=(0.99, 0.01), labelsize=30)
+
+fig
+
+
+
+
+
+# E-to-I2
+fig = Figure(resolution=(1080, 720))
+
+ax = CairoMakie.Axis(fig[1, 1]) #, xlabel="", ylabel="", xlabelsize=labelsize, ylabelsize=labelsize,
+            # xticks=(collect((minimum(interval)):1000:maximum(interval)), [L"0", L"1", L"2", L"3", L"4", L"5"]), xticklabelsize=ticklabelsize, xgridvisible=false,
+            # yticklabelsize=ticklabelsize, ygridvisible=false,
+            # limits=(minimum(interval), maximum(interval), 1, ylim_max))
+
+
+lines!(ax, mean(weightsIE[1, :, :], dims=1)[1, :], label="A", linewidth=linewidth)
+lines!(ax, mean(weightsIE[5, :, :], dims=1)[1, :], label="B", linewidth=linewidth)
+lines!(ax, mean(weightsIE[9, :, :], dims=1)[1, :], label="C", linewidth=linewidth)
+lines!(ax, mean(weightsIE[13, :, :], dims=1)[1, :], label="D", linewidth=linewidth)
+lines!(ax, mean(weightsIE[17, :, :], dims=1)[1, :], label="E", linewidth=linewidth)
+axislegend(ax, position=(0.99, 0.01), labelsize=30)
+
+fig
+
+
+
+
+
+using ColorSchemes
+
+cl1 = ColorScheme(range(colorant"gray5", colorant"gray80", length=100))
+
+cl_inh = ColorScheme(range(colorant"gray80", colorant"firebrick", length=100))
+cl_exc = ColorScheme(range(colorant"gray80", colorant"dodgerblue4", length=100))
+
+inhibition_cs = vcat(get(cl1, LinRange(0, 1, 100)), get(cl_inh, LinRange(0, 1, 100)))
+excitation_cs = vcat(get(cl1, LinRange(0, 1, 100)), get(cl_exc, LinRange(0, 1, 100)))
 
 
 
 
 
 
+meanEE = zeros(20, 20)
+for ipop = 1:20
+    for iipop = 1:20
+        meanEE[iipop, ipop] = sum(weights[filter(i->i>0, popmembers[:, iipop]), filter(i->i>0, popmembers[:, ipop])]) / count(i->i>0, weights[filter(i->i>0, popmembers[:, iipop]), filter(i->i>0, popmembers[:, ipop])])
+    end
+end
+
+heatmap(meanEE, colormap=excitation_cs)
 
 
+heatmap(weightsEE[:, :, 500], colormap=excitation_cs)
 
+ipopmembers = findI2populations(weights, 20, popmembers, iipop_len=27)
+heatmap(mean(weightsIE[ipopmembers[:, :] .- 4000, :, 1000], dims=1)[1, :, :], colormap=inhibition_cs)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+heatmap(mean(weightsEI[ipopmembers[:, :] .- 4750, :, 1000], dims=1)[1, :, :], colormap=excitation_cs)
 
 ipopmembers = findI2populations(weights, 20, popmembers, iipop_len=50)
 # ipopmembers = ipopmembers'

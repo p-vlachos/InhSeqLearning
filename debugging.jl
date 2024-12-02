@@ -1,160 +1,270 @@
+sim_name = string("cross_corr_spontaneous.h5")
+sim_savedpath = "./analysis_data/"
+
+fid = h5open(joinpath(sim_savedpath, sim_name), "r")
+crossEE = read(fid["data"]["crossEE"])
+crossEI = read(fid["data"]["crossEI"])
+crossIE = read(fid["data"]["crossIE"])
+close(fid)
+
+
+# Average over all simulations
+avg_cross = mean(crossEE, dims=4)
+avg_cross = crossEE[:, :, :, 7]
+# Average over all 1st sequences
+cross0 = mean(avg_cross[:, 1, 1, 1], dims=2)
+cross0 += mean(avg_cross[:, 5, 5, 1], dims=2)
+cross0 += mean(avg_cross[:, 9, 9, 1], dims=2)
+cross0 += mean(avg_cross[:, 13, 13, 1], dims=2)
+cross0 += mean(avg_cross[:, 17, 17, 1], dims=2)
+
+cross1 = mean(avg_cross[:, 1, 2, 1], dims=2)
+cross1 += mean(avg_cross[:, 5, 6, 1], dims=2)
+cross1 += mean(avg_cross[:, 9, 10, 1], dims=2)
+cross1 += mean(avg_cross[:, 13, 14, 1], dims=2)
+cross1 += mean(avg_cross[:, 17, 18, 1], dims=2)
+
+cross2 = mean(avg_cross[:, 1, 3, 1], dims=2)
+cross2 += mean(avg_cross[:, 5, 7, 1], dims=2)
+cross2 += mean(avg_cross[:, 9, 11, 1], dims=2)
+cross2 += mean(avg_cross[:, 13, 15, 1], dims=2)
+cross2 += mean(avg_cross[:, 17, 19, 1], dims=2)
+
+cross3 = mean(avg_cross[:, 1, 4, 1], dims=2)
+cross3 += mean(avg_cross[:, 5, 8, 1], dims=2)
+cross3 += mean(avg_cross[:, 9, 12, 1], dims=2)
+cross3 += mean(avg_cross[:, 13, 16, 1], dims=2)
+cross3 += mean(avg_cross[:, 17, 20, 1], dims=2)
 
 
 
+legendlabelsize = 28
+labelsize = 36
+ticklabelsize = 36
 
+baseline = 17
+fig = Figure(resolution = (1080, 720))
+ax_single = Axis(fig[1, 1], 
+            xlabel=L"\text{lag (ms)}", xlabelsize=labelsize,
+            ylabel=L"\text{cross-correlation}", ylabelsize=labelsize,
+            xticks=([-200., -100., 0., 100., 200.], [L"-200", L"-100", L"0", L"100", L"200"]), xticklabelsize=ticklabelsize,
+            yticks=([0., .5, 1.], [L"0", L"0.5", L"1"]), yticklabelsize=ticklabelsize,
+            limits=(-280, 280, -0.15, 1.1))
+#1
+for pop = 20:-1:5
+    lines!(ax_single, -400:400, avg_cross[:, baseline, pop, 1], color=ColorSchemes.Greys[5], linewidth=linewidth/2, label=L"\text{other}")
+end
+for pop = 1:4
+    lines!(ax_single, -400:400, avg_cross[:, baseline, pop, 1], color=ColorSchemes.Blues[5+pop], linewidth=linewidth/2, label=L"\text{members}")
+end
 
+#5
+for pop = 20:-1:9
+    lines!(ax_single, -400:400, avg_cross[:, baseline, pop, 1], color=ColorSchemes.Greys[5], linewidth=linewidth/2, label=L"\text{other}")
+end
+for pop = 5:9
+    lines!(ax_single, -400:400, avg_cross[:, baseline, pop, 1], color=ColorSchemes.Blues[pop], linewidth=linewidth/2, label=L"\text{members}")
+end
+for pop = 4:-1:1
+    lines!(ax_single, -400:400, avg_cross[:, baseline, pop, 1], color=ColorSchemes.Greys[5], linewidth=linewidth/2, label=L"\text{other}")
+end
 
+#9
+for pop = 20:-1:13
+    lines!(ax_single, -400:400, avg_cross[:, baseline, pop, 1], color=ColorSchemes.Greys[5], linewidth=linewidth/2, label=L"\text{other}")
+end
+for pop = 9:12
+    lines!(ax_single, -400:400, avg_cross[:, baseline, pop, 1], color=ColorSchemes.Blues[pop-4], linewidth=linewidth/2, label=L"\text{members}")
+end
+for pop = 8:-1:1
+    lines!(ax_single, -400:400, avg_cross[:, baseline, pop, 1], color=ColorSchemes.Greys[5], linewidth=linewidth/2, label=L"\text{other}")
+end
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-ppp = 0
-x = rand(500, 500, 500)
-@time for i=1:500
-	for j=1:500
-		for k=1:500
-			# x[i, j, k] += .01
-			x[k, j, i] += .01
-			# x[j, k, i] += .01
-		end
-	end
+#13
+for pop = 20:-1:17
+    lines!(ax_single, -400:400, avg_cross[:, baseline, pop, 1], color=ColorSchemes.Greys[5], linewidth=linewidth/2, label=L"\text{other}")
+end
+for pop = 13:16
+    lines!(ax_single, -400:400, avg_cross[:, baseline, pop, 1], color=ColorSchemes.Blues[pop-8], linewidth=linewidth/2, label=L"\text{members}")
+end
+for pop = 12:-1:1
+    lines!(ax_single, -400:400, avg_cross[:, baseline, pop, 1], color=ColorSchemes.Greys[5], linewidth=linewidth/2, label=L"\text{other}")
 end
 
 
-sim_name = string("network_9.h5")
-sim_savepath = "./networks_new/"
-output_dir = "./output_new/"
+#17
+for pop = 17:20
+    lines!(ax_single, -400:400, avg_cross[:, baseline, pop, 1], color=ColorSchemes.Blues[pop-12], linewidth=linewidth/2, label=L"\text{members}")
+end
+for pop = 16:-1:1
+    lines!(ax_single, -400:400, avg_cross[:, baseline, pop, 1], color=ColorSchemes.Greys[5], linewidth=linewidth/2, label=L"\text{other}")
+end
+
+# lines!(ax_single, -400:400, avg_cross[:, 1, 1], color=ColorSchemes.Blues[6], linewidth=linewidth, label=L"E1-E1")
+# lines!(ax_single, -400:400, avg_cross[:, 1, 2], color=ColorSchemes.Blues[7], linewidth=linewidth, label=L"E1-E2")
+# lines!(ax_single, -400:400, avg_cross[:, 1, 3], color=ColorSchemes.Blues[8], linewidth=linewidth, label=L"E1-E3")
+# lines!(ax_single, -400:400, avg_cross[:, 1, 4], color=ColorSchemes.Blues[9], linewidth=linewidth, label=L"E1-E4")
+axislegend(ax_single, position=(0.95, 0.95), labelsize=legendlabelsize, merge=true)
+fig
 
 
-fid = h5open(joinpath(sim_savepath, sim_name), "r")
+
+
+
+
+
+
+
+
+
+
+
+
+cl1 = ColorScheme(range(colorant"gray5", colorant"gray80", length=100))
+
+cl_inh = ColorScheme(range(colorant"gray80", colorant"firebrick", length=100))
+cl_exc = ColorScheme(range(colorant"gray80", colorant"dodgerblue4", length=100))
+
+inhibition_cs = vcat(get(cl1, LinRange(0, 1, 100)), get(cl_inh, LinRange(0, 1, 100)))
+excitation_cs = vcat(get(cl1, LinRange(0, 1, 100)), get(cl_exc, LinRange(0, 1, 100)))
+
+
+sim_name = string("network_7_stimulation.h5")
+sim_savedpath = "./networks_trained_stimulation/"
+output_dir = "./output_analysis/"
+
+fid = h5open(joinpath(sim_savedpath, sim_name), "r")
 popmembers = read(fid["data"]["popmembers"])
 weights = read(fid["data"]["weights"])
 weightsEE = read(fid["data"]["weightsEE"])
 weightsEI = read(fid["data"]["weightsEI"])
 weightsIE = read(fid["data"]["weightsIE"])
+times = read(fid["data"]["times"])
 close(fid)
-# times, ns, Ne, Ncells, T, new_weights = sim(stim, weights_old, popmembers, T)
-
-
-ipopmembers = findI2populations(weights, 20, popmembers, iipop_len=100)
 
 
 
-popmemlen = zeros(20)
-for ipop = 1:20
-	popmemlen[ipop] = length(filter(i->i>0, popmembers[ipop, :]))
-end
+# plotNetworkActivity(times, popmembers, ipopmembers; interval=5_000:15_000, name="_testin")
+plotWeightsEE(meanEE, name="_testinEE")
+plotWeightsIE(mean(weightsIE[ipopmembers[:, :] .- 4000, :, 1000], dims=1)[1, :, :], name="_testinIE")
+plotWeightsEI(mean(weightsEI[ipopmembers[:, :] .- 4750, :, 1000], dims=1)[1, :, :], name="_testinEI")
 
-using Plots
+size(weightsEI[ipopmembers[:, :] .- 4750, :, 1000])
 
-Plots.plot()
-# plot_data = zeros(10, 10000)
+ipopmembers = findI2populations(weights, 20, popmembers, iipop_len=27)
+
+meanEI = zeros(20, 20)
 for ipop = 1:20
 	for iipop = 1:20
-		if ipop == iipop
-		# if ipop != iipop
-			Plots.plot!(weightsEE[ipop, iipop, :])
-		end
+		meanEI[ipop, iipop] = mean(weightsEI[ipopmembers[:, ipop] .- 4750, iipop, 1000])
 	end
 end
-Plots.plot!(legend=false)
 
-
-
-# Plots.plot()	# This makes not much sense ... too much info
-# for ipop = 1:20
-# 	for cc = 1:250
-# 	# for cc = 1:500
-# 	# for cc = 500:1000
-# 		# if ipop == iipop
-# 		if cc in popmembers[ipop, :]
-# 			Plots.plot!(weightsEI[cc, ipop, :])
-# 		end
-# 	end
-# end
-# Plots.plot!(legend=false)
-
-
-
-# Plots.plot()
-# plot_data = zeros(20, 10000)
-# # for ipop = 1:20
-# # for cc = 1:1000
-# for cc = 1:500
-# # for cc = 500:1000
-# 	# if ipop == iipop
-# 	# if cc in popmembers[1, :]
-# 	# if !(cc in popmembers[1, :])
-# 	# 	Plots.plot!(weightsIE[cc, 1, :])
-# 	# end
-# 	if !(cc in popmembers[1, :])
-# 		plot_data[1, :] += sum(weightsIE[cc, 1, :])
-# 	end
-# 	# end
-# end
-# # end
-# # Plots.plot!(legend=false)
-# Plots.plot!(plot_data, legend=false)
-
-
-
-# This is E-assemblies➡I2  
-Plots.plot()
-ipop = 2
-for cc = 1:250
-	if (cc+4750) in ipopmembers[ipop, :]
-		Plots.plot!(weightsEI[cc, ipop, :])
-	end
-end
-Plots.plot!(legend=false)
-
-
-
-# This is I1➡E-assemblies
-Plots.plot()
-ipop = 18
-for cc = 1:750
-	if cc in popmembers[ipop, :]
-		Plots.plot!(weightsIE[cc, ipop, :] ./ popmemlen[ipop])
-	end
-end
-Plots.plot!(legend=false)
-
-
-
-# This is I2➡E-assemblies
-Plots.plot()
-ipop = 1
-for cc = 751:1000
-	if cc in popmembers[ipop, :]
-		Plots.plot!(weightsIE[cc, ipop, :] ./ popmemlen[ipop])
-	end
-end
-Plots.plot!(legend=false)
-
-
-
-
-# This is I2➡E-assemblies (average)
-Plots.plot()
-# ipop = 1
+meanIE = zeros(20, 20)
 for ipop = 1:20
-	Plots.plot!(vec(mean(weightsEI[:, ipop, :], dims=1)))
+	for iipop = 1:20
+		meanIE[ipop, iipop] = mean(weightsIE[ipopmembers[:, ipop] .- 4000, iipop, 1000])
+	end
 end
-Plots.plot!(legend=false)
+
+heatmap(meanEI, colormap=excitation_cs)
+heatmap(meanIE, colormap=inhibition_cs)
+
+
+sim_name = string("network_7.h5")
+sim_savedpath = "./networks_trained/"
+for sim = 1:10
+
+	sim_name = string("network_", sim,".h5")
+
+	fid = h5open(joinpath(sim_savedpath, sim_name), "r")
+	popmembers = read(fid["data"]["popmembers"])
+	weights = read(fid["data"]["weights"])
+	weightsEE = read(fid["data"]["weightsEE"])
+	weightsEI = read(fid["data"]["weightsEI"])
+	weightsIE = read(fid["data"]["weightsIE"])
+	# times = read(fid["data"]["times"])
+	close(fid)
+
+	ipopmembers = findI2populations(weights, 20, popmembers, iipop_len=27)
+	output_dir = string("./output_analysis/simulation_", sim, "/") 
+	plotWeightsEE(meanEE, name="_testinEE", output_dir=output_dir)
+	plotWeightsIE(mean(weightsIE[ipopmembers[:, :] .- 4000, :, 1000], dims=1)[1, :, :], name="_testinIE", output_dir=output_dir)
+	plotWeightsEI(mean(weightsEI[ipopmembers[:, :] .- 4750, :, 1000], dims=1)[1, :, :], name="_testinEI", output_dir=output_dir)
+
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

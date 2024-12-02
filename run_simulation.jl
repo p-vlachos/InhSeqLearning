@@ -11,19 +11,19 @@ sim_savedpath = "./networks_trained/"
 loadnet = true				# Choose between simulating an existing or a novel network
 savenet = true				# Save the network after stimulation
 
-stim_mode = "plot"	# Choose between spontaneous or brief stimulation (only for loaded networks)
-random_seeds = 1837 # [2061, 5987, 3642, 9465, 1837, 6487, 3791, 6482, 6485, 9316]
+stim_mode = "stimulation"	# Choose between spontaneous or brief stimulation (only for loaded networks)
+random_seeds = 3791 # [2061, 5987, 3642, 9465, 1837, 6487, 3791, 6482, 6485, 9316]
 Nsimulations = length(random_seeds)			# Number of simulation to run
 
 
-for sim_num = 1:10#Nsimulations
+for sim_num = 7:7#Nsimulations
 	if loadnet
 		# T = 50_000
-		T = 23_000
+		T = 20_000
 		if stim_mode == "spontaneous"
 			stim = zeros(4, 20)						# Spontaneous activity (no stimulation)
 		elseif stim_mode == "stimulation"
-			stim = makeStimSeq_brief(T)				# Brief stimulation of 1st assembly in sequences (random order)
+			stim = makeStimSeq_brief(T, stim_rate=8., randomize=false)				# Brief stimulation of 1st assembly in sequences (random order)
 		else
 			stim = [1. 5. 9. 13. 17. 1. 5. 9. 13. 17. 1. 5. 9. 13. 17. 1. 5. 9. 13. 17.;
 					2_001. 2_201. 2_401. 2_601. 2_801. 7_001. 7_201. 7_401. 7_601. 7_801. 12_001. 12_201. 12_401. 12_601. 12_801. 17_001. 17_201. 17_401. 17_601. 17_801.;
@@ -31,10 +31,13 @@ for sim_num = 1:10#Nsimulations
 					8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8.]
 		end
 	else
-		T = 1_500_000
+		# T = 1_500_000
 		stim = makeStimSeq(5, 20, seq_len=4)		# Full train 5 sequences
+		T = 20_000
+		# stim = zeros(4, 20)		# Full train 5 sequences
 	end
 
+	# sim_name = string("network_pre_train.h5")
 	sim_name = string("network_", sim_num,".h5")
 	# sim_name = string("network_i2STDP_knockout.h5")
 
