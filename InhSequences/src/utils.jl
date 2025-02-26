@@ -53,7 +53,7 @@ function makeStimSeq_brief(T::Int64; Npop::Int64=20, stim_rate::Float64=8., seq_
 	# Create sequences of stimuli
 	stim_delay::Float64 = 1_000. 	# Should be greater than or equal to 'stdpdelay' (ms)
 	stim_duration::Float64 = 30. 	# Stimulation period for each assembly (ms)
-	stim_interval::Float64 = 400.	# Interval between each assembly stimulation (ms)
+	stim_interval::Float64 = 200.	# Interval between each assembly stimulation (ms)
 
 	Nstim::Int64 = seq_len * seq_num
 	Ntotal::Int64 = round(Int, (T - stim_delay) / stim_interval)

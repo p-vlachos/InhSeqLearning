@@ -1,13 +1,6 @@
-# using Pkg
-# Pkg.activate(".")
-# using InhSequences
-# using Statistics
-# using HDF5
-
 using ColorSchemes
 using LaTeXStrings
 using CairoMakie
-# using CurveFit
 using Colors
 
 

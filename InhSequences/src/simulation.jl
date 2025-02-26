@@ -16,7 +16,7 @@ function simnew(stim::Matrix{Float64}, T::Int64; random_seed::Int64=2817)
 	weights[1:Ne, 1:Ne] .= jee0
 	@. weights[1:Ne, (Ne+1):Ncells] = jie
 
-	@. weights[1:Ne, (Ncells-Ni2+1):Ncells] = ji2e
+	# @. weights[1:Ne, (Ncells-Ni2+1):Ncells] = ji2e
 
 	@. weights[(Ne+1):Ncells, 1:Ne] = jei0
 
@@ -27,15 +27,22 @@ function simnew(stim::Matrix{Float64}, T::Int64; random_seed::Int64=2817)
 
 	weights[diagind(weights)] .= 0.
 
-	# --- Populations ---
-	Npop::Int64 = maximum(Int, stim[1, :])	# Number of assemblies
-	popmembers::Matrix{Int64} = zeros(Int, Nmaxmembers, Npop)	# Contains indexes of neurons for each population
-	@simd for pp = 1:Npop
-		members::Vector{Int64} = findall(rand(Ne) .< pmembership)
-		popmembers[1:length(members), pp] .= members
-	end
+	# # --- Populations ---
+	# Npop::Int64 = maximum(Int, stim[1, :])	# Number of assemblies
+	# popmembers::Matrix{Int64} = zeros(Int, Nmaxmembers, Npop)	# Contains indexes of neurons for each population
+	# @simd for pp = 1:Npop
+	# 	members::Vector{Int64} = findall(rand(Ne) .< pmembership)
+	# 	popmembers[1:length(members), pp] .= members
+	# end
 	
-	return sim(stim, weights, popmembers, T)
+	# Non-overlapping assemblies of 200 neurons each
+	Npop::Int64 = maximum(Int, stim[1, :])	# Number of assemblies
+	popmembers::Matrix{Int64} = zeros(Int, 200, Npop)	# Contains indexes of neurons for each population
+	@simd for pp = 1:Npop
+		popmembers[:, pp] .= ((pp-1)*200)+1:(pp*200)
+	end
+
+	return sim(stim, weights, popmembers, T, random_seed=random_seed)
 end
 
 
@@ -53,6 +60,12 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 	@unpack dt, dtnormalize, stdpdelay, Nspikes = SimulationParameters()
 	Random.seed!(random_seed)
 
+	tau_i_d::Float64 = 200. #400.
+	tau_i_r::Float64 = 30. #30.
+
+	# tauirise2::Float64 = 5.	# I synapse rise time (ms)
+	# tauidecay2::Float64 = 20. # I synapse decay time (ms)
+
 	# _________________________--- Simulation ---______________________________
 	Ncells::Int64 = Ne + Ni									# Total number of neurons
 	times::Matrix{Float64} = zeros(Ncells, Nspikes)			# Times of neuron spikes
@@ -65,10 +78,6 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 	nextx::Vector{Float64} = zeros(Ncells) 					# Time of next external excitatory input
 	sumwee0::Vector{Float64} = zeros(Ne) 					# Initial summed E weight, for normalization
 	Nee::Vector{Int64} = zeros(Int, Ne) 					# Number of E->E inputs, for normalization
-
-	# E➡I₂ synaptic normalization
-	sumwie0::Vector{Float64} = zeros(Ni2) 					# Initial summed I2 weight, for normalization
-	Nie::Vector{Int64} = zeros(Int, Ni2) 					# Number of E->I₂ inputs, for normalization
 	
 	rx::Vector{Float64} = zeros(Ncells) 							# Rate of external input
 	vth::Vector{Float64} = vth0 * ones(Ncells) 						# Adaptive threshold
@@ -80,6 +89,8 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 	x_vstdp::Vector{Float64} = zeros(Ne)							# Low-pass filtered spike train for LTP
 	trace_eistdp::Vector{Float64} = zeros(Ncells)					# eiSTDP trace
 	trace_expDecay::Vector{Float64} = zeros(Ncells)					# iSTDP₂ trace
+	trace_expDecay_r::Vector{Float64} = zeros(Ncells)
+	trace_expDecay_d::Vector{Float64} = zeros(Ncells)
 	Nsteps::Int64 = round(Int, T/dt)
 	inormalize::Int64 = round(Int, dtnormalize/dt)
 
@@ -92,11 +103,11 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 	tprev::Float64 = 0.
 	ipop::Int64 = 0
 	sumwee::Float64 = 0.
-	sumwie::Float64 = 0.
 	ge::Float64 = 0.
 	gi::Float64 = 0.
+	# gi1::Float64 = 0.
+	# gi2::Float64 = 0.
 	spiked::BitVector = falses(Ncells)
-	indx::Int64 = 0.
 	stim_size::Int64 = size(stim)[2]
 
 	expdist = Exponential()
@@ -115,20 +126,13 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 		else
 			rx[cc] = rix
 			nextx[cc] = rand(expdist) / rx[cc]
-			if cc > Ncells-Ni2
-				indx = round(Int, cc-Ncells+Ni2)
-				@simd for dd = 1:Ne
-					sumwie0[indx] += weights[dd, cc]
-					(weights[dd, cc] > 0.) && (Nie[indx] += 1)
-				end
-			end
 		end
 	end
 
 	# --- TRACKERS ---
 	tracker_indx::Int64 = 1
 	Npop::Int64 = maximum(Int, stim[1, :])	# Number of assemblies
-	tracker = Tracker(T=T, Ni=Ni, Ni2=Ni2, Npop=Npop, tracker_dt=round(Int, T/1_00))
+	tracker = Tracker(T=T, Ni=Ni, Ni2=Ni2, Npop=Npop, tracker_dt=round(Int, T/1_000))
 	@unpack tracker_dt , weightsEE, weightsEI, weightsIE = tracker
 	tracker_dt /= dt
 
@@ -179,30 +183,15 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 					end
 				end
 			end
-			for cc = (Ncells-Ni2+1):Ncells
-				indx = cc - Ncells + Ni2
-				sumwie = 0.
-				@simd for dd = 1:Ne
-					sumwie += weights[dd, cc]
-				end
-				@simd for dd = 1:Ne
-					if weights[dd, cc] > 0.
-						weights[dd, cc] = (weights[dd, cc] / sumwie) * sumwie0[indx]
-						if weights[dd, cc] < jiemin
-							weights[dd, cc] = jiemin
-						elseif weights[dd, cc] > jiemax
-							weights[dd, cc] = jiemax
-						end
-					end
-				end
-			end
 		end  # End normalization
 
 		# --- Update single cells ---
 		for cc = 1:Ncells
 			trace_istdp[cc] -= dt * trace_istdp[cc] / tauy
 			trace_eistdp[cc] -= dt * trace_eistdp[cc] / tau_ie
-			trace_expDecay[cc] -= dt * trace_expDecay[cc] / tau_i
+			trace_expDecay_r[cc] -= dt * trace_expDecay_r[cc] / tau_i_r
+			trace_expDecay_d[cc] -= dt * trace_expDecay_d[cc] / tau_i_d
+			trace_expDecay[cc] = (trace_expDecay_d[cc] - trace_expDecay_r[cc]) / (tau_i_d - tau_i_r)
 
 			while(t > nextx[cc]) 	# External input
 				nextx[cc] += rand(expdist) / rx[cc]
@@ -213,6 +202,8 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 			xedecay[cc] += -dt * xedecay[cc] / tauedecay + forwardInputsEPrev[cc]
 			xirise[cc] += -dt * xirise[cc] / tauirise + forwardInputsIPrev[cc]
 			xidecay[cc] += -dt * xidecay[cc] / tauidecay + forwardInputsIPrev[cc]
+
+
 
 			if cc <= Ne
 				vth[cc] += dt * (vth0 - vth[cc]) / tauth
@@ -246,7 +237,8 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 					lastSpike[cc] = t
 					trace_istdp[cc] += 1.
 					trace_eistdp[cc] += 1.
-					trace_expDecay[cc] += 1.
+					trace_expDecay_r[cc] += 1.
+					trace_expDecay_d[cc] += 1.
 
 					if ns[cc] < Nspikes
 						ns[cc] += 1
@@ -326,7 +318,6 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 					for dd = 1:Ne
 						(weights[dd, cc] == 0.) && (continue)
 						weights[dd, cc] += eta_ie * (trace_eistdp[dd] - Adep_ie)
-						# weights[dd, cc] -= eta_ie * trace_eistdp[dd]
 						if weights[dd, cc] > jiemax
 							weights[dd, cc] = jiemax
 						elseif weights[dd, cc] < jiemin

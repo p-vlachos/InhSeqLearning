@@ -117,7 +117,8 @@ fig
 
 
 
-
+using CairoMakie
+using ColorSchemes
 
 
 cl1 = ColorScheme(range(colorant"gray5", colorant"gray80", length=100))
@@ -153,6 +154,13 @@ size(weightsEI[ipopmembers[:, :] .- 4750, :, 1000])
 
 ipopmembers = findI2populations(weights, 20, popmembers, iipop_len=27)
 
+meanEE = zeros(20, 20)
+for ipop = 1:20
+	for iipop = 1:20
+		meanEE[ipop, iipop] = sum(weights[filter(i->i>0, popmembers[:, ipop]), filter(i->i>0, popmembers[:, iipop])]) / count(i->i>0, weights[filter(i->i>0, popmembers[:, ipop]), filter(i->i>0, popmembers[:, iipop])]) 
+	end
+end
+
 meanEI = zeros(20, 20)
 for ipop = 1:20
 	for iipop = 1:20
@@ -171,11 +179,20 @@ heatmap(meanEI, colormap=excitation_cs)
 heatmap(meanIE, colormap=inhibition_cs)
 
 
-sim_name = string("network_7.h5")
+simulation = 2
+sim_name = string("network", simulation, "_.h5")
 sim_savedpath = "./networks_trained/"
-for sim = 1:10
+sim_savedpath = "./networks_trained_spontaneous/"
+sim_savedpath = "./networks_trained_stimulation/"
+for sim = simulation:simulation
 
-	sim_name = string("network_", sim,".h5")
+	if sim_savedpath == "./networks_trained/"
+		sim_name = string("network_", sim,".h5")
+	elseif sim_savedpath == "./networks_trained_spontaneous/"
+		sim_name = string("network_", sim,"_spontaneous.h5")
+	else
+		sim_name = string("network_", sim,"_stimulation.h5")
+	end
 
 	fid = h5open(joinpath(sim_savedpath, sim_name), "r")
 	popmembers = read(fid["data"]["popmembers"])
@@ -183,15 +200,22 @@ for sim = 1:10
 	weightsEE = read(fid["data"]["weightsEE"])
 	weightsEI = read(fid["data"]["weightsEI"])
 	weightsIE = read(fid["data"]["weightsIE"])
-	# times = read(fid["data"]["times"])
+	times = read(fid["data"]["times"])
 	close(fid)
 
-	ipopmembers = findI2populations(weights, 20, popmembers, iipop_len=27)
+	# ipopmembers = findI2populations(weights, 20, popmembers, iipop_len=27)
+	ipopmembers = findI2populations(weights, 16, popmembers, iipop_len=27)
 	output_dir = string("./output_analysis/simulation_", sim, "/") 
-	plotWeightsEE(meanEE, name="_testinEE", output_dir=output_dir)
-	plotWeightsIE(mean(weightsIE[ipopmembers[:, :] .- 4000, :, 1000], dims=1)[1, :, :], name="_testinIE", output_dir=output_dir)
-	plotWeightsEI(mean(weightsEI[ipopmembers[:, :] .- 4750, :, 1000], dims=1)[1, :, :], name="_testinEI", output_dir=output_dir)
-
+	# plotWeightsEE(meanEE, name="_testinEE", output_dir=output_dir)
+	if sim_savedpath == "./networks_trained/"
+		plotWeightsEE(weightsEE[:, :, 1000], name="_testinEE", output_dir=output_dir)
+		plotWeightsIE(mean(weightsIE[ipopmembers[:, :] .- 4000, :, 1000], dims=1)[1, :, :], name="_testinIE", output_dir=output_dir)
+		plotWeightsEI(mean(weightsEI[ipopmembers[:, :] .- 4750, :, 1000], dims=1)[1, :, :], name="_testinEI", output_dir=output_dir)
+	elseif sim_savedpath == "./networks_trained_spontaneous/"
+		plotNetworkActivity(times, popmembers, ipopmembers; interval=5_000:10_000, name=string("_testinActivitySpontaneous_", sim))
+	else
+		plotNetworkActivity(times, popmembers, ipopmembers; interval=5_000:10_000, name=string("_testinActivityStimulation_", sim))
+	end
 end
 
 
@@ -199,6 +223,55 @@ end
 
 
 
+sim_name = string("network_1_spontaneous.h5")
+fid = h5open(joinpath(sim_savedpath, sim_name), "r")
+popmembers = read(fid["data"]["popmembers"])
+weights = read(fid["data"]["weights"])
+weightsEE = read(fid["data"]["weightsEE"])
+weightsEI = read(fid["data"]["weightsEI"])
+weightsIE = read(fid["data"]["weightsIE"])
+times = read(fid["data"]["times"])
+close(fid)
+
+
+
+
+
+###########################################################################################
+##########                              RATE MODEL                    			 ##########
+###########################################################################################
+using Distributions
+using ProgressBars
+using Random
+
+
+T = 1000
+
+w, x = rate_simnew(T)
+
+fig = Figure(resolution=(720, 480))
+ax = Axis(fig[1, 1], xlabel="time (a.u.)", ylabel="firing rate (a.u.)")
+
+for ipop = 1:4
+	lines!(ax, x[ipop], color="blue")
+end
+fig
+
+for ipop = 6:9
+	lines!(ax, x[ipop], color="red")
+end
+
+fig
+lines!(ax, x[5], color="green")
+fig
+lines!(ax, x[10], color="black")
+fig
+# for ipop = 1:4
+# 	lines!(ax, Φ.(x[ipop]))
+# end
+
+fig
+fig
 
 
 
@@ -213,46 +286,81 @@ end
 
 
 
+###########################################################################################
+##########                          Cross-Correlation                 			 ##########
+###########################################################################################
+# using StatsBase
+using DSP
+using CairoMakie
+
+function gen_gaussian(matrix, center, sigma)
+	# Generate a 2D gaussian at "center" with specified "sigma"
+	x_c, y_c = center
+	for x in 1:size(matrix, 1)
+		for y in 1:size(matrix, 2)
+			matrix[x, y] += exp(-((x - x_c)^2 + (y - y_c)^2) / (2*sigma^2))
+		end
+	end
+	return matrix
+end
 
 
+x = zeros(1024, 1024)
+x = gen_gaussian(x, (300, 400), 80.)
+x = gen_gaussian(x, (750, 800), 90.)
+x = 1 .- x
+heatmap(x, colormap="Greys")
+
+y = zeros(1024, 1024)
+y = gen_gaussian(y, (200, 200), 80.)
+y = gen_gaussian(y, (800, 900), 90.)
+y = 1 .- y
+heatmap(y, colormap="Greys")
 
 
+function comp_crosscor(x, y)
+	ksize = 32
+	overlap = 8
+	# z = zeros()
+	for i = 1:(ksize-overlap):(1024-ksize)
+		for j = 1:(ksize-overlap):(1024-ksize)
+			crosscor(x[i:i+ksize, j:j+ksize], y[i:i+ksize, j:j+ksize])
+			# sum([x[i:i+ksize, j:j+ksize], y[i:i+ksize, j:j+ksize]])
+		end
+	end
+end
+
+@time comp_crosscor(x, y)
 
 
+[vec(x[i:i+ksize, j:j+ksize]); vec(y[i:i+ksize, j:j+ksize])]
+
+z = DSP.xcorr(x[i:i+ksize, j:j+ksize], y[i:i+ksize, j:j+ksize])
 
 
+x[i:i+ksize, j:j+ksize]
+
+z = crosscor(vec(x[i:i+ksize, j:j+ksize]), vec(y[i:i+ksize, j:j+ksize]))
+
+heatmap(z[3, :, :])
 
 
+a = rand(10)
+b = rand(10)
+
+c = crosscor(a, b)
+
+lines(z)
 
 
+i = j = 1
+ksize=32
+overlap=8
+size(1:(ksize-overlap):(1024-ksize))
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+heatmap(x, colormap="Greys")
+heatmap(y, colormap="Greys")
 
 
 
