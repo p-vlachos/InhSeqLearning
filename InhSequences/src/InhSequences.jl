@@ -7,6 +7,7 @@ module InhSequences
     using ProgressBars
     using LinearAlgebra
     using Distributions
+    using EasyFit
 
     include("structs.jl")
     include("simulation.jl")
@@ -14,6 +15,6 @@ module InhSequences
 
     export simnew, sim
     export makeStim, makeStimSeq, makeStimSeq_brief
-    export findI2populations, convolveSpikes, getPopulationRates
+    export findI2populations, convolveSpikes, getPopulationRates, sequentialityScore, getPopulationBinRates, findOptimalDecoder
     export NeuronalParams, SynapticParams, PlasticityParams
 end # module InhSequences

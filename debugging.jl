@@ -179,7 +179,7 @@ heatmap(meanEI, colormap=excitation_cs)
 heatmap(meanIE, colormap=inhibition_cs)
 
 
-simulation = 2
+simulation = 1
 sim_name = string("network", simulation, "_.h5")
 sim_savedpath = "./networks_trained/"
 sim_savedpath = "./networks_trained_spontaneous/"
@@ -223,7 +223,7 @@ end
 
 
 
-sim_name = string("network_1_spontaneous.h5")
+sim_name = string("network_1.h5")
 fid = h5open(joinpath(sim_savedpath, sim_name), "r")
 popmembers = read(fid["data"]["popmembers"])
 weights = read(fid["data"]["weights"])
@@ -278,7 +278,15 @@ fig
 
 
 
+####################################################
 
+sim_name = string("network_1.h5")
+sim_savepath = string("./networks_trained_", stim_mode, "/")
+fid = h5open(joinpath(sim_savedpath, sim_name), "r")
+weights = read(fid["data"]["weights"])
+times = read(fid["data"]["times"])
+popmembers = read(fid["data"]["popmembers"])
+close(fid)
 
 
 

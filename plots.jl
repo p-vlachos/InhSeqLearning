@@ -1,13 +1,13 @@
 using ColorSchemes
 using LaTeXStrings
-using CairoMakie
+using GLMakie
 using Colors
 
 
 function plotNetworkActivity(times::Matrix{Float64}, popmembers::Matrix{Int64}, ipopmembers::Matrix{Int64}; interval::AbstractVector, name::AbstractString, output_dir::AbstractString="./output_analysis/")
-    Ne::Int64 = 4000
-    Ni2::Int64 = 250
     Ncells::Int64 = size(times)[1]
+    Ne::Int64 = round(Int, Ncells*0.8)
+    Ni2::Int64 = 250
     Npop::Int64 = size(popmembers, 2)
     Nmembers_max::Int64 = size(popmembers, 1)
     Ni_members::Int64 = 27
@@ -18,7 +18,7 @@ function plotNetworkActivity(times::Matrix{Float64}, popmembers::Matrix{Int64}, 
     linewidth::Float64 = 2.
     markersize::Float64 = 1.
 
-    restcells::Vector{Int64} = deleteat!(map(*, ones(Int, 4000), range(1,stop=4000)), sort(unique(popmembers))[2:end])
+    restcells::Vector{Int64} = deleteat!(map(*, ones(Int, Ne), range(1, stop=Ne)), sort(unique(popmembers))[2:end])
     ylim_max::Int64 = count(i->(i>0), popmembers) + length(restcells) + (Ncells-Ni2-Ne) + length(ipopmembers)
 
     ns::Vector{Int64} = zeros(Ncells)
@@ -32,7 +32,7 @@ function plotNetworkActivity(times::Matrix{Float64}, popmembers::Matrix{Int64}, 
     ytickcount::Int64 = 1
 
     fig = Figure(resolution=(1080, 720))
-    ax = CairoMakie.Axis(fig[1, 1], xlabel=L"\text{simulation time (s)}", ylabel=L"\text{sequences (neurons)}", xlabelsize=labelsize, ylabelsize=labelsize,
+    ax = Axis(fig[1, 1], xlabel=L"\text{simulation time (s)}", ylabel=L"\text{sequences (neurons)}", xlabelsize=labelsize, ylabelsize=labelsize,
                 xticks=(plot_interval, [L"%$(x)" for x = 1:length(plot_interval)]), xticklabelsize=ticklabelsize, xgridvisible=false,
                 yticklabelsize=ticklabelsize, ygridvisible=false,
                 limits=(minimum(interval), maximum(interval), 1, ylim_max))
@@ -43,7 +43,7 @@ function plotNetworkActivity(times::Matrix{Float64}, popmembers::Matrix{Int64}, 
             indx = round(Int, popmembers[cc, pp])
             x_vals = times[indx, 1:round(Int, ns[indx])]
             y_vals = rowcount * ones(length(x_vals))
-            CairoMakie.scatter!(ax, x_vals, y_vals, color=ColorSchemes.Blues[7], markersize=markersize)
+            scatter!(ax, x_vals, y_vals, color=ColorSchemes.Blues[7], markersize=markersize)
             rowcount += 1
         end
         if mod(pp, 4) == 0
@@ -61,7 +61,7 @@ function plotNetworkActivity(times::Matrix{Float64}, popmembers::Matrix{Int64}, 
     for cc in restcells
         x_vals = times[cc, 1:round(Int, ns[cc])]
         y_vals = rowcount * ones(length(x_vals))
-        CairoMakie.scatter!(ax, x_vals, y_vals, color=ColorSchemes.Greys[7], markersize=markersize)
+        scatter!(ax, x_vals, y_vals, color=ColorSchemes.Greys[7], markersize=markersize)
         rowcount += 1
     end
     hlines!(ax, rowcount, linewidth=linewidth*.5, color=:gray20)
@@ -69,7 +69,7 @@ function plotNetworkActivity(times::Matrix{Float64}, popmembers::Matrix{Int64}, 
     for cc = (Ne+1):(Ncells-Ni2+1)
         x_vals = times[cc, 1:round(Int, ns[cc])]
         y_vals = rowcount * ones(length(x_vals))
-        CairoMakie.scatter!(ax, x_vals, y_vals, color=ColorSchemes.Reds[9], markersize=markersize)
+        scatter!(ax, x_vals, y_vals, color=ColorSchemes.Reds[9], markersize=markersize)
         rowcount += 1
     end
     hlines!(ax, rowcount, linewidth=linewidth*.5, color=:gray20)
@@ -79,7 +79,7 @@ function plotNetworkActivity(times::Matrix{Float64}, popmembers::Matrix{Int64}, 
             indx = round(Int, popmembers[cc, pp])
             x_vals = times[indx, 1:round(Int, ns[indx])]
             y_vals = rowcount * ones(length(x_vals))
-            CairoMakie.scatter!(ax, x_vals, y_vals, color=ColorSchemes.Reds[6], markersize=markersize)
+            scatter!(ax, x_vals, y_vals, color=ColorSchemes.Reds[6], markersize=markersize)
             rowcount += 1
         end
         if mod(pp, 4) == 0
@@ -107,7 +107,7 @@ function plotWeightsEE(weightsEE::Matrix{Float64}; name::AbstractString, output_
     markersize::Float64 = 1.
 
     fig = Figure(resolution=(920, 720))
-    ax = CairoMakie.Axis(fig[1, 1], xlabel=L"\text{presynaptic }E\text{-assembly}", ylabel=L"\text{postsynaptic }E\text{-assembly}", xlabelsize=labelsize, ylabelsize=labelsize,
+    ax = Axis(fig[1, 1], xlabel=L"\text{presynaptic }E\text{-assembly}", ylabel=L"\text{postsynaptic }E\text{-assembly}", xlabelsize=labelsize, ylabelsize=labelsize,
                 xticks=(1:4:20, [L"%$(x)" for x=1:4:20]), xticklabelsize=ticklabelsize, xgridvisible=false,
                 yticks=(1:4:20, [L"%$(x)" for x=1:4:20]), yticklabelsize=ticklabelsize, ygridvisible=false)
     ht = heatmap!(ax, weightsEE, colormap=excitation_cs)
@@ -142,7 +142,7 @@ function plotWeightsIE(weightsIE::Matrix{Float64}; name::AbstractString, output_
     markersize::Float64 = 1.
 
     fig = Figure(resolution=(920, 720))
-    ax = CairoMakie.Axis(fig[1, 1], xlabel=L"\text{presynaptic }E \text{-assembly}", ylabel=L"\text{postsynaptic }I_2 \text{-assembly}", xlabelsize=labelsize, ylabelsize=labelsize,
+    ax = Axis(fig[1, 1], xlabel=L"\text{presynaptic }E \text{-assembly}", ylabel=L"\text{postsynaptic }I_2 \text{-assembly}", xlabelsize=labelsize, ylabelsize=labelsize,
                 xticks=(1:4:20, [L"%$(x)" for x=1:4:20]), xticklabelsize=ticklabelsize, xgridvisible=false,
                 yticks=(1:4:20, [L"%$(x)" for x=1:4:20]), yticklabelsize=ticklabelsize, ygridvisible=false)
     ht = heatmap!(ax, weightsIE, colormap=inhibition_cs)
@@ -177,7 +177,7 @@ function plotWeightsEI(weightsEI::Matrix{Float64}; name::AbstractString, output_
     markersize::Float64 = 1.
 
     fig = Figure(resolution=(920, 720))
-    ax = CairoMakie.Axis(fig[1, 1], xlabel=L"\text{presynaptic }I_2 \text{-assembly}", ylabel=L"\text{postsynaptic }E \text{-assembly}", xlabelsize=labelsize, ylabelsize=labelsize,
+    ax = Axis(fig[1, 1], xlabel=L"\text{presynaptic }E \text{-assembly}", ylabel=L"\text{postsynaptic }I_2 \text{-assembly}", xlabelsize=labelsize, ylabelsize=labelsize,
                 xticks=(1:4:20, [L"%$(x)" for x=1:4:20]), xticklabelsize=ticklabelsize, xgridvisible=false,
                 yticks=(1:4:20, [L"%$(x)" for x=1:4:20]), yticklabelsize=ticklabelsize, ygridvisible=false)
     ht = heatmap!(ax, weightsEI, colormap=inhibition_cs)

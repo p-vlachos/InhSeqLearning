@@ -17,7 +17,7 @@ crossEE = zeros(length(ccov_range), Npop, Npop, 10)
 crossEI = zeros(length(ccov_range), Npop, Npop, 10)
 crossIE = zeros(length(ccov_range), Npop, Npop, 10)
 
-for sim_num = 1:10
+for sim_num = 1:1
     # sim_name = string("network_", sim_num,"_spontaneous.h5")
 	# sim_savedpath = "./networks_trained_spontaneous/"
     sim_name = string("network_", sim_num,"_stimulation.h5")
@@ -80,7 +80,7 @@ subplotlabelsize = 66
 linewidth=4
 
 
-sim_name = string("network_7.h5")
+sim_name = string("network_1.h5")
 sim_savedpath = "./networks_trained/"
 output_dir = "./output_analysis/"
 

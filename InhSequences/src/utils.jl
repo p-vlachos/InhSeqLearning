@@ -53,7 +53,7 @@ function makeStimSeq_brief(T::Int64; Npop::Int64=20, stim_rate::Float64=8., seq_
 	# Create sequences of stimuli
 	stim_delay::Float64 = 1_000. 	# Should be greater than or equal to 'stdpdelay' (ms)
 	stim_duration::Float64 = 30. 	# Stimulation period for each assembly (ms)
-	stim_interval::Float64 = 200.	# Interval between each assembly stimulation (ms)
+	stim_interval::Float64 = 600.	# Interval between each assembly stimulation (ms)
 
 	Nstim::Int64 = seq_len * seq_num
 	Ntotal::Int64 = round(Int, (T - stim_delay) / stim_interval)
@@ -76,12 +76,14 @@ function makeStimSeq_brief(T::Int64; Npop::Int64=20, stim_rate::Float64=8., seq_
 	return stim
 end
 
-function findI2populations(weights::Matrix{Float64}, Npop::Int64, popmembers; iipop_len::Int64=27)
+function findI2populations(weights::Matrix{Float64}, popmembers::Matrix{Int64}; iipop_len::Int64=27, Ni2::Int64=250)
 	#	Finds the most highly connected assemblies from E to 2nd i-population (fixed length)
-	ipopmembers = zeros(iipop_len, Npop)
+	Npop::Int64 = size(popmembers)[2]
+	Ncells::Int64 = size(weights)[1]
+	ipopmembers::Matrix{Int64} = zeros(iipop_len, Npop)
 	for ipop = 1:Npop
 	    members = filter(i->(i>0), popmembers[:, ipop])    			# Get members of excitatory assembly
-	    ie_weights = vec(sum(weights[members, 4751:5000], dims=1))  # Get sum of all weights projected from each E-assemble to each 2nd ipopulation neuron
+	    ie_weights = vec(sum(weights[members, (Ncells-Ni2+1):Ncells], dims=1))  # Get sum of all weights projected from each E-assemble to each 2nd ipopulation neuron
 		x = sortperm(ie_weights)[(end-iipop_len+1):end]             # Get a permutation for the shorted summed weights
 	    ind = 1
 	    for ii in x
@@ -89,8 +91,7 @@ function findI2populations(weights::Matrix{Float64}, Npop::Int64, popmembers; ii
             ind += 1
 	    end
 	end
-	ipopmembers = convert(Array{Int,2}, ipopmembers .+ 4750)
-	return ipopmembers
+	return ipopmembers .+ (Ncells - Ni2)
 end
 
 Θ(x::Float64) = x > 0. ? x : 0.
@@ -135,17 +136,96 @@ function getPopulationRates(spikeTimes::Matrix{Float64}, popmembers::Matrix{Int6
 	return rates
 end
 
+function getPopulationBinRates(spikeTimes::Matrix{Float64}, popmembers::Matrix{Int64}; interval::AbstractVector, dt::Float64=.125, window::Int64=20)
+	Npop::Int64 = size(popmembers)[2]
+	Nsteps::Int64 = round(Int, length(interval) / dt)
+	rates::Matrix{Int64} = zeros(Nsteps, Npop)
+	# Compute instantaneous population rates
+	for ipop = 1:Npop
+		for mem in popmembers[:, ipop]
+			for tt in filter(i->(interval[1]<i<interval[end]), spikeTimes[mem, :])
+				((tt - interval[1]) < dt) && (continue)
+				rates[round(Int, (tt - interval[1]) / dt), ipop] += 1
+			end
+		end
+	end
+	# Compute the average over each millisecond
+	binSize::Int64 = round(Int, 1/dt)			# By default equal to 1 ms
+	avg_rates::Matrix{Float64} = zeros(round(Int, Nsteps/binSize), Npop)
+	for (ind, tt) in enumerate(collect(binSize:binSize:Nsteps))
+		avg_rates[ind, :] .= vec(mean(rates[tt-binSize+1:tt, :], dims=1))
+	end
+	avg_rates *= 1000/size(popmembers)[1]		# Normalize over all population size and convert to Hz
+	# Compute the smooth rates for each population
+	smooth_rates::Matrix{Float64} = zeros(round(Int, Nsteps/binSize), Npop)
+	for ipop = 1:Npop
+		smooth_rates[:, ipop] = movavg(avg_rates[:, ipop], window).x
+	end
+	return smooth_rates
+end
 
-# ---------- OLD FUNCTIONS -----------
-# function times2spikes(times::Matrix{Float64})
-# 	Ncells::Int64 = size(times)[1]
-# 	spikes::Matrix{Int64} = zeros(Ncells, round(Int, maximum(times)))
-# 	for cc = 1:Ncells
-# 		for tt in times[1, :]
-# 			(tt == 0) && (continue)
-# 			t = round(Int, tt)
-# 			spikes[cc, t] += 1
-# 		end
-# 	end
-# 	return spikes	
-# end
+function sequentialityScore(rates::Matrix{Float64}; seq_length::Int64=4)
+	Npop::Int64 = size(rates)[2]
+	activations::Vector{Int64} = decodeActivity(rates)
+	hit::Int64 = 0
+	miss::Int64 = 0
+	previous::Int64 = activations[1]
+	expectation::Int64 = 0
+	last_elements::Vector{Int64} = seq_length:seq_length:Npop
+	for current in activations
+		if current == previous
+			continue
+		else
+			# if current != 0
+				if expectation != 0		# Check if expectations are met
+					(current == expectation) ? (hit += 1) : (miss += 1)
+				end
+				# Set expectations
+				(current in last_elements) ? (expectation = 0) : (expectation = current + 1)
+			# end
+			previous = current
+		end
+	end
+	return hit / (hit + miss), activations
+end
+
+function decodeActivity(rates::Matrix{Float64}; window::Int64=20)
+	# T::Int64 = size(rates)[1]
+	low_limit::Float64 = 1.		# low limit for accepting activation (Hz)
+	# Find the most active population at each timestep
+	(act, ind) = findmax(rates, dims=2)
+	activations::Vector{Int64} = [act[i] > low_limit ? ind[i][2] : 0 for i in 1:size(rates)[1]]
+
+	# Define a time window to avoid flickering (for weak assembly activations, should not matter for good models)
+    # offset = Int((activityWindow-1)/2)
+    # cleaned = []
+    # for i = offset+1:recordedTime-offset
+	#     item = mostActive[i]
+    #     item < 1 && continue
+    #     c = counter(mostActive[i-offset:i+offset])              # function "counter" from package DataStructures
+    #     c[item] > offset && push!(cleaned, mostActive[i])  # if populations is most active for the majority of "window_size", record
+    # end
+	return activations
+end
+
+function findOptimalDecoder(spikeTimes::Matrix{Float64}, popmembers::Matrix{Int64}; interval::AbstractVector, dt::Float64=.125, seq_length::Int64=4)
+    smoothingWindows::Vector{Int64} = collect(10:10:100)	# Smoothing windows for computing firing rates
+    activityWindows::Vector{Int64} = collect(3:2:19)		# Windows for determining most active population
+    opt_params::Vector{Float64} = zeros(2)
+	sequence::Vector = zeros(length(interval))
+	maxSeq::Float64 = 0.
+    for sW in smoothingWindows
+        for aW in activityWindows
+            rates = getPopulationBinRates(spikeTimes, popmembers, interval=interval, dt=dt, window=sW)
+            # Compute sequentiality score
+            sequentiality, sequence = sequentialityScore(rates, seq_length=seq_length)
+            if sequentiality > maxSeq
+                maxSeq = sequentiality
+                opt_params .= [sW, aW]
+            end
+        end
+    end
+	# Compare with random baseline - NOTE: Needs to be fixed
+    # randScore = sequentialityScore(shuffle(sequence), seq_length=seq_length)
+    return maxSeq, opt_params, sequence#, ((maxSeq - randScore)/(1 - randScore))
+end

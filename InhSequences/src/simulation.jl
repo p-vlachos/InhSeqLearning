@@ -6,7 +6,7 @@ function simnew(stim::Matrix{Float64}, T::Int64; random_seed::Int64=2817)
 	#  Generates new weights and populations with unpotentiated synapses, runs simulation
 
 	@info "Setting up weights"
-	@unpack Ne, Ni, Ni2, jee0, jei0, jie, ji2e, jii, jii12, jii2, p, pmembership, Nmaxmembers = InitializationParameters()
+	@unpack Ne, Ni, Ni2, jee0, jei0, jie, jii, jii12, jii2, p, pmembership, Nmaxmembers = InitializationParameters()
 	Ncells::Int64 = Ne + Ni
 	Random.seed!(random_seed)
 
@@ -23,11 +23,11 @@ function simnew(stim::Matrix{Float64}, T::Int64; random_seed::Int64=2817)
 	@. weights[(Ne+1):Ncells, (Ne+1):Ncells] = jii
 	@. weights[(Ne+1):(Ncells-Ni2), (Ncells-Ni2+1):Ncells] = jii12
 	@. weights[(Ncells-Ni2+1):Ncells, (Ncells-Ni2+1):Ncells] = jii2
-	weights[rand(Ncells, Ncells) .> p] .= 0.
 
+	weights[rand(Ncells, Ncells) .> p] .= 0.
 	weights[diagind(weights)] .= 0.
 
-	# # --- Populations ---
+	# --- Populations ---
 	# Npop::Int64 = maximum(Int, stim[1, :])	# Number of assemblies
 	# popmembers::Matrix{Int64} = zeros(Int, Nmaxmembers, Npop)	# Contains indexes of neurons for each population
 	# @simd for pp = 1:Npop
@@ -63,8 +63,8 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 	tau_i_d::Float64 = 200. #400.
 	tau_i_r::Float64 = 30. #30.
 
-	# tauirise2::Float64 = 5.	# I synapse rise time (ms)
-	# tauidecay2::Float64 = 20. # I synapse decay time (ms)
+	taui2rise::Float64 = 5. #5.	# I synapse rise time (ms)
+	taui2decay::Float64 = 50. #20. # I synapse decay time (ms)
 
 	# _________________________--- Simulation ---______________________________
 	Ncells::Int64 = Ne + Ni									# Total number of neurons
@@ -78,6 +78,9 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 	nextx::Vector{Float64} = zeros(Ncells) 					# Time of next external excitatory input
 	sumwee0::Vector{Float64} = zeros(Ne) 					# Initial summed E weight, for normalization
 	Nee::Vector{Int64} = zeros(Int, Ne) 					# Number of E->E inputs, for normalization
+
+	forwardInputsI2::Vector{Float64} = zeros(Ncells)
+	forwardInputsI2Prev::Vector{Float64} = zeros(Ncells)
 	
 	rx::Vector{Float64} = zeros(Ncells) 							# Rate of external input
 	vth::Vector{Float64} = vth0 * ones(Ncells) 						# Adaptive threshold
@@ -99,16 +102,37 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 	xedecay::Vector{Float64} = zeros(Ncells)
 	xirise::Vector{Float64} = zeros(Ncells)
 	xidecay::Vector{Float64} = zeros(Ncells)
+	
+	xi2rise::Vector{Float64} = zeros(Ncells)
+	xi2decay::Vector{Float64} = zeros(Ncells)
+
 	t::Float64 = 0.
 	tprev::Float64 = 0.
 	ipop::Int64 = 0
 	sumwee::Float64 = 0.
 	ge::Float64 = 0.
 	gi::Float64 = 0.
-	# gi1::Float64 = 0.
-	# gi2::Float64 = 0.
+	gi1::Float64 = 0.
+	gi2::Float64 = 0.
 	spiked::BitVector = falses(Ncells)
 	stim_size::Int64 = size(stim)[2]
+
+	# --- Dictionaries for "sparse" looping ---
+	# vSTDP and normalization
+	nzRowsByColEE = Dict(m => findall(weights[1:Ne, m].!=0) for m = 1:Ne)  # E-to-E, neuron m gets input from nzRowsByColEE[m]
+	nzColsByRowEE = Dict(m => findall(weights[m, 1:Ne].!=0) for m = 1:Ne)  # E-to-E, neuron m sends input to nzColsByRowEE[m]
+
+	# iSTDP₁
+	nzRowsByColI1E = Dict(m => Ne .+ findall(weights[(Ne+1):(Ncells-Ni2), m].!=0) for m = 1:Ne) # I1-to-E, E fired, input from I1, neuron m gets input from nzRowsByColI1E[m]
+	nzColsByRowI1E = Dict(m => findall(weights[m, 1:Ne].!=0) for m = Ne+1:Ncells-Ni2)     		# For I1 neurons lists all excitatory postsynaptic neurons
+
+	# iSTDP₂
+	nzRowsByColI2E = Dict(m => (Ne + Ni - Ni2) .+ findall(weights[(Ncells-Ni2+1):(Ncells), m].!=0) for m = 1:Ne) # I2-to-E, E fired, input from I2, neuron m gets input from nzRowsByColI2E[m]
+	nzColsByRowI2E = Dict(m => findall(weights[m, 1:Ne].!=0) for m = (Ncells-Ni2)+1:Ncells) # I2-to-E, I2 fired, lists all E presynaptic
+	
+	# eiSTDP
+	nzColsByRowEI = Dict(m =>  (Ncells - Ni2) .+ findall(weights[m, (Ncells-Ni2+1):(Ncells)].!=0) for m = 1:Ne) # E fired, output to I2
+	nzRowsByColEI = Dict(m => findall(weights[1:Ne, m].!=0) for m = (Ncells-Ni2+1):Ncells) # I2 fired, get E presynaptic
 
 	expdist = Exponential()
 
@@ -146,6 +170,7 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 
 		@. forwardInputsE = 0.
 		@. forwardInputsI = 0.
+		@. forwardInputsI2 = 0.
 
 		# Check if we have entered or exited a stimulation period
 		if t < (stim[3, end] + 1)
@@ -169,17 +194,12 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 		if mod(tt, inormalize) == 0
 			for cc = 1:Ne
 				sumwee = 0.
-				@simd for dd = 1:Ne
+				@simd for dd in nzRowsByColEE[cc]
 					sumwee += weights[dd, cc]
 				end
-				@simd for dd = 1:Ne
+				@simd for dd in nzRowsByColEE[cc]
 					if weights[dd, cc] > 0.
-						weights[dd, cc] = (weights[dd, cc] / sumwee) * sumwee0[cc]
-						if weights[dd, cc] < jeemin
-							weights[dd, cc] = jeemin
-						elseif weights[dd, cc] > jeemax
-							weights[dd, cc] = jeemax
-						end
+						weights[dd, cc] = clamp((weights[dd, cc] / sumwee) * sumwee0[cc], jeemin, jeemax)
 					end
 				end
 			end
@@ -202,7 +222,9 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 			xedecay[cc] += -dt * xedecay[cc] / tauedecay + forwardInputsEPrev[cc]
 			xirise[cc] += -dt * xirise[cc] / tauirise + forwardInputsIPrev[cc]
 			xidecay[cc] += -dt * xidecay[cc] / tauidecay + forwardInputsIPrev[cc]
-
+			
+			xi2rise[cc] += -dt * xi2rise[cc] / taui2rise + forwardInputsI2Prev[cc]
+			xi2decay[cc] += -dt * xi2decay[cc] / taui2decay + forwardInputsI2Prev[cc]
 
 
 			if cc <= Ne
@@ -217,7 +239,11 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 
 				# Update membrane voltage
 				ge = (xedecay[cc] - xerise[cc]) / (tauedecay - tauerise)
-				gi = (xidecay[cc] - xirise[cc]) / (tauidecay - tauirise)
+				# gi = (xidecay[cc] - xirise[cc]) / (tauidecay - tauirise)
+				
+				gi1 = (xidecay[cc] - xirise[cc]) / (tauidecay - tauirise)
+				gi2 = (xi2decay[cc] - xi2rise[cc]) / (taui2decay - taui2rise)
+				gi = gi1 + gi2
 
 				if cc <= Ne  # Excitatory neuron, has adaptation
 					v[cc] += dt * ((vleake - v[cc] + deltathe * exp((v[cc] - vth[cc]) / deltathe)) / taue + ge * (erev - v[cc]) / C + gi * (irev - v[cc]) / C - wadapt[cc] / C)
@@ -227,9 +253,7 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 					end
 				else
 					v[cc] += dt * ((vleaki - v[cc]) / taui + ge * (erev - v[cc]) / C + gi * (irev - v[cc]) / C)
-					if v[cc] > vth0
-						spiked[cc] = true
-					end
+					(v[cc] > vth0) && (spiked[cc] = true)
 				end
 
 				if spiked[cc]	# Spike occurred
@@ -254,8 +278,12 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 					@simd for dd = 1:Ncells
 						if cc <= Ne
 							forwardInputsE[dd] += weights[cc, dd]
-						else
+						# else
+						# 	forwardInputsI[dd] += weights[cc, dd]
+						elseif cc <= (Ncells-Ni2)
 							forwardInputsI[dd] += weights[cc, dd]
+						else
+							forwardInputsI2[dd] += weights[cc, dd]
 						end
 					end
 				end  # End if(spiked)
@@ -266,21 +294,13 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 			if spiked[cc] && (t > stdpdelay)
 				if cc <= Ne
 					# Excitatory neuron fired, modify inputs from 1st i-population
-					for dd = (Ne+1):(Ncells-Ni2)
-						(weights[dd, cc] == 0.) && (continue)
-						weights[dd, cc] += eta * trace_istdp[dd]
-						(weights[dd, cc] > jeimax) && (weights[dd, cc] = jeimax)
+					@simd for dd in nzRowsByColI1E[cc]
+						weights[dd, cc] = min(weights[dd, cc] + eta * trace_istdp[dd], jeimax)
 					end
 				elseif cc <= (Ncells - Ni2)
 					# 1st i-population neuron fired, modify outputs to excitatory neurons
-					for dd = 1:Ne
-						(weights[cc, dd] == 0.) && (continue)
-						weights[cc, dd] += eta * (trace_istdp[dd] - 2. * r0 * tauy)
-						if weights[cc, dd] > jeimax
-							weights[cc, dd] = jeimax
-						elseif weights[cc, dd] < jeimin
-							weights[cc, dd] = jeimin
-						end
+					@simd for dd in nzColsByRowI1E[cc]
+						weights[cc, dd] = clamp(weights[cc, dd] + eta * (trace_istdp[dd] - 2. * r0 * tauy), jeimin, jeimax)
 					end
 				end
 			end	# End, iSTDP₁
@@ -289,17 +309,13 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 			if spiked[cc] && (t > stdpdelay) && (t < stim[3, end])
 				if cc <= Ne
 					# Excitatory neuron fired, modify inputs from 2nd i-population
-					for dd = (Ncells - Ni2 + 1):Ncells
-						(weights[dd, cc] == 0.) && (continue)
-						weights[dd, cc] -= ilamda * ((1. - weights[dd, cc])^mi) * trace_expDecay[dd]
-						(weights[dd, cc] < jei2min) && (weights[dd, cc] = jei2min)
+					@simd for dd in nzRowsByColI2E[cc]
+						weights[dd, cc] = max(weights[dd, cc] - ilamda * trace_expDecay[dd])
 					end
 				elseif cc > (Ncells - Ni2)
 					# 2nd i-population neuron fired, modify outputs to excitatory neurons
-					for dd = 1:Ne
-						(weights[cc, dd] == 0.) && (continue)
-						weights[cc, dd] += ilamda * alfa * (weights[cc, dd]^mi) * trace_expDecay[dd]
-						(weights[cc, dd] > jei2max) && (weights[cc, dd] = jei2max)
+					@simd for dd in nzColsByRowI2E[cc]
+						weights[cc, dd] = min(weights[cc, dd] + ilamda * trace_expDecay[dd], jeimax)
 					end
 				end
 			end # End, iSTDP₂
@@ -308,21 +324,13 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 			if spiked[cc] && (t > stdpdelay) && (t < stim[3, end])
 				if cc <= Ne
 					# Excitatory neuron fired, modify outputs to 2nd i-population
-					for dd = (Ncells-Ni2+1):Ncells
-						(weights[cc, dd] == 0.) && (continue)
-						weights[cc, dd] += eta_ie * trace_eistdp[dd]
-						(weights[cc, dd] > jiemax) && (weights[cc, dd] = jiemax)
+					@simd for dd in nzColsByRowEI[cc]
+						weights[cc, dd] = min(weights[cc, dd] + eta_ie * trace_eistdp[dd], jiemax)
 					end
 				elseif cc > (Ncells-Ni2)
 					# 2nd i-population neuron fired, modify inputs from E neurons
-					for dd = 1:Ne
-						(weights[dd, cc] == 0.) && (continue)
-						weights[dd, cc] += eta_ie * (trace_eistdp[dd] - Adep_ie)
-						if weights[dd, cc] > jiemax
-							weights[dd, cc] = jiemax
-						elseif weights[dd, cc] < jiemin
-							weights[dd, cc] = jiemin
-						end
+					@simd for dd in nzRowsByColEI[cc] # = 1:Ne
+						weights[dd, cc] = clamp(weights[dd, cc] + eta_ie * (trace_eistdp[dd] - Adep_ie), jiemin, jiemax)
 					end
 				end
 			end # End, eiSTDP
@@ -330,26 +338,23 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 			# ___________ vSTDP ___________
 			# vSTDP, LTD component
 			if spiked[cc] && (t > stdpdelay) && (cc < Ne)
-				for dd = 1:Ne 	# Depress weights from cc to dd
-					(weights[cc, dd] == 0.) && (continue)
+				@simd for dd in nzColsByRowEE[cc]
 					if u_vstdp[dd] > thetaltd
-						weights[cc, dd] -= altd * (u_vstdp[dd] - thetaltd)
-						(weights[cc, dd] < jeemin) && (weights[cc, dd] = jeemin)
+						weights[cc, dd] = max(weights[cc, dd] - altd * (u_vstdp[dd] - thetaltd), jeemin)
 					end
 				end
 			end  # End, LTD
 
 			# vSTDP, LTP component
 			if (t > stdpdelay) && (cc < Ne) && (v[cc] > thetaltp) && (v_vstdp[cc] > thetaltd)
-				for dd = 1:Ne
-					(weights[dd, cc] == 0.) && (continue)
-					weights[dd, cc] += dt * altp * x_vstdp[dd] * (v[cc] - thetaltp) * (v_vstdp[cc] - thetaltd)
-					(weights[dd, cc] > jeemax) && (weights[dd, cc] = jeemax)
+				@simd for dd in nzRowsByColEE[cc]
+					weights[dd, cc] = min(weights[dd, cc] + dt * altp * x_vstdp[dd] * (v[cc] - thetaltp) * (v_vstdp[cc] - thetaltd), jeemax)
 				end
 			end # End LTP
 		end  # End, loop over cells
 		@. forwardInputsEPrev = forwardInputsE
 		@. forwardInputsIPrev = forwardInputsI
+		@. forwardInputsI2Prev = forwardInputsI2
 		@. spiked = false
 
 		# --- TRACKERS ---
@@ -361,7 +366,7 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 					weightsEE[iipop, ipop, tracker_indx] = sum(weights[ppmembers, pmembers]) / count(i->i>0, weights[ppmembers, pmembers])
 				end
 				for cc = 1:Ni
-					weightsIE[cc, ipop, tracker_indx] = sum(weights[cc+Ne, pmembers])
+					weightsIE[cc, ipop, tracker_indx] = sum(weights[cc+Ne, pmembers]) / count(i->i>0, weights[cc+Ne, pmembers])
 					if cc > (Ni - Ni2)
 						weightsEI[(cc-(Ni-Ni2)), ipop, tracker_indx] = sum(weights[pmembers, (cc+Ne)]) / count(i->i>0, weights[pmembers, (cc+Ne)])
 					end
