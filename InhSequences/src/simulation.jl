@@ -15,11 +15,7 @@ function simnew(stim::Matrix{Float64}, T::Int64; random_seed::Int64=2817)
 	weights::Matrix{Float64} = zeros(Ncells, Ncells)
 	weights[1:Ne, 1:Ne] .= jee0
 	@. weights[1:Ne, (Ne+1):Ncells] = jie
-
-	# @. weights[1:Ne, (Ncells-Ni2+1):Ncells] = ji2e
-
 	@. weights[(Ne+1):Ncells, 1:Ne] = jei0
-
 	@. weights[(Ne+1):Ncells, (Ne+1):Ncells] = jii
 	@. weights[(Ne+1):(Ncells-Ni2), (Ncells-Ni2+1):Ncells] = jii12
 	@. weights[(Ncells-Ni2+1):Ncells, (Ncells-Ni2+1):Ncells] = jii2
@@ -35,12 +31,9 @@ function simnew(stim::Matrix{Float64}, T::Int64; random_seed::Int64=2817)
 	# 	popmembers[1:length(members), pp] .= members
 	# end
 	
-	# Non-overlapping assemblies of 200 neurons each
+	# Non-overlapping assemblies of Nmaxmembers neurons each
 	Npop::Int64 = maximum(Int, stim[1, :])	# Number of assemblies
-	popmembers::Matrix{Int64} = zeros(Int, 200, Npop)	# Contains indexes of neurons for each population
-	@simd for pp = 1:Npop
-		popmembers[:, pp] .= ((pp-1)*200)+1:(pp*200)
-	end
+	popmembers::Matrix{Int64} = reshape(shuffle(1:(Npop*Nmaxmembers)), (Nmaxmembers, Npop))	# Contains indexes of neurons for each population
 
 	return sim(stim, weights, popmembers, T, random_seed=random_seed)
 end
@@ -53,34 +46,27 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 	@unpack Ne, Ni, Ni2, Nmaxmembers = InitializationParameters()
 	@unpack taue, taui, vleake, vleaki, deltathe, C, erev, irev = NeuronalParameters()
 	@unpack vth0, ath, tauth, vpeak, vre, taurefrac, aw_adapt, bw_adapt, tauw_adapt = NeuronalParameters()
-	@unpack tauerise, tauedecay, tauirise, tauidecay, rex, rix, jex, jix = SynapticParameters()
+	@unpack tauerise, tauedecay, tauirise, tauidecay, taui2rise, taui2decay, rex, rix, ri2x, jex, jix = SynapticParameters()
 	@unpack jeemin, jeemax, jeimin, jeimax, jiemin , jiemax, jei2min, jei2max = SynapticParameters()
 	@unpack altd, altp, thetaltd, thetaltp, tauu, tauv, taux = PlasticityParameters()
-	@unpack tauy, eta, r0, tau_i, mi, alfa, ilamda, tau_ie, eta_ie, Adep_ie = PlasticityParameters()
+	@unpack tauy, eta, r0, tau_i_r, tau_i_d, ilamda, tau_ie, eta_ie, Adep_ie = PlasticityParameters()
 	@unpack dt, dtnormalize, stdpdelay, Nspikes = SimulationParameters()
 	Random.seed!(random_seed)
-
-	tau_i_d::Float64 = 200. #400.
-	tau_i_r::Float64 = 30. #30.
-
-	taui2rise::Float64 = 5. #5.	# I synapse rise time (ms)
-	taui2decay::Float64 = 50. #20. # I synapse decay time (ms)
 
 	# _________________________--- Simulation ---______________________________
 	Ncells::Int64 = Ne + Ni									# Total number of neurons
 	times::Matrix{Float64} = zeros(Ncells, Nspikes)			# Times of neuron spikes
 	ns::Vector{Int64} = zeros(Int, Ncells)					# Number of spikes per neuron
 	forwardInputsE::Vector{Float64} = zeros(Ncells) 		# Summed weight of incoming E spikes
-	forwardInputsI::Vector{Float64} = zeros(Ncells)			# Summed weight of incoming I spikes
+	forwardInputsI::Vector{Float64} = zeros(Ncells)			# Summed weight of incoming I₁ spikes
+	forwardInputsI2::Vector{Float64} = zeros(Ncells)		# Summed weight of incoming I₂ spikes
 	forwardInputsEPrev::Vector{Float64} = zeros(Ncells) 	# As above, for previous timestep
-	forwardInputsIPrev::Vector{Float64} = zeros(Ncells)		# As above, for I population
+	forwardInputsIPrev::Vector{Float64} = zeros(Ncells)		# As above, for I₁ population
+	forwardInputsI2Prev::Vector{Float64} = zeros(Ncells)	# As above, for I₂ population
 	v::Vector{Float64} = zeros(Ncells) 						# Membrane voltage
 	nextx::Vector{Float64} = zeros(Ncells) 					# Time of next external excitatory input
 	sumwee0::Vector{Float64} = zeros(Ne) 					# Initial summed E weight, for normalization
 	Nee::Vector{Int64} = zeros(Int, Ne) 					# Number of E->E inputs, for normalization
-
-	forwardInputsI2::Vector{Float64} = zeros(Ncells)
-	forwardInputsI2Prev::Vector{Float64} = zeros(Ncells)
 	
 	rx::Vector{Float64} = zeros(Ncells) 							# Rate of external input
 	vth::Vector{Float64} = vth0 * ones(Ncells) 						# Adaptive threshold
@@ -92,20 +78,18 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 	x_vstdp::Vector{Float64} = zeros(Ne)							# Low-pass filtered spike train for LTP
 	trace_eistdp::Vector{Float64} = zeros(Ncells)					# eiSTDP trace
 	trace_expDecay::Vector{Float64} = zeros(Ncells)					# iSTDP₂ trace
-	trace_expDecay_r::Vector{Float64} = zeros(Ncells)
-	trace_expDecay_d::Vector{Float64} = zeros(Ncells)
 	Nsteps::Int64 = round(Int, T/dt)
 	inormalize::Int64 = round(Int, dtnormalize/dt)
 
 	# Auxiliary variables 
-	xerise::Vector{Float64} = zeros(Ncells)		# for E/I currents (difference of exponentials)
-	xedecay::Vector{Float64} = zeros(Ncells)
-	xirise::Vector{Float64} = zeros(Ncells)
-	xidecay::Vector{Float64} = zeros(Ncells)
-	
-	xi2rise::Vector{Float64} = zeros(Ncells)
-	xi2decay::Vector{Float64} = zeros(Ncells)
-
+	xerise::Vector{Float64} = zeros(Ncells)				# E currents - rise exponent
+	xedecay::Vector{Float64} = zeros(Ncells)			# E currents - decay exponent
+	xirise::Vector{Float64} = zeros(Ncells)				# I₁ currents - rise exponent
+	xidecay::Vector{Float64} = zeros(Ncells)			# I₁ currents - decay exponent
+	xi2rise::Vector{Float64} = zeros(Ncells)			# I₂ currents - rise exponent
+	xi2decay::Vector{Float64} = zeros(Ncells)			# I₂ currents - decay exponent
+	trace_expDecay_r::Vector{Float64} = zeros(Ncells)	# iSTDP₂ - rise exponent
+	trace_expDecay_d::Vector{Float64} = zeros(Ncells)	# iSTDP₂ - decay exponent
 	t::Float64 = 0.
 	tprev::Float64 = 0.
 	ipop::Int64 = 0
@@ -141,16 +125,17 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 		v[cc] = vre + (vth0 - vre) * rand()
 		if cc <= Ne
 			rx[cc] = rex
-			nextx[cc] = rand(expdist) / rx[cc]
 			# Calculate normalization parameters
 			@simd for dd = 1:Ne
 				sumwee0[cc] += weights[dd, cc]
 				(weights[dd, cc] > 0.) && (Nee[cc] += 1)
 			end
-		else
+		elseif cc <= (Ncells-Ni2)
 			rx[cc] = rix
-			nextx[cc] = rand(expdist) / rx[cc]
+		else
+			rx[cc] = ri2x
 		end
+		nextx[cc] = rand(expdist) / rx[cc]
 	end
 
 	# --- TRACKERS ---
@@ -198,9 +183,7 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 					sumwee += weights[dd, cc]
 				end
 				@simd for dd in nzRowsByColEE[cc]
-					if weights[dd, cc] > 0.
-						weights[dd, cc] = clamp((weights[dd, cc] / sumwee) * sumwee0[cc], jeemin, jeemax)
-					end
+					weights[dd, cc] = clamp((weights[dd, cc] / sumwee) * sumwee0[cc], jeemin, jeemax)
 				end
 			end
 		end  # End normalization
@@ -222,7 +205,6 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 			xedecay[cc] += -dt * xedecay[cc] / tauedecay + forwardInputsEPrev[cc]
 			xirise[cc] += -dt * xirise[cc] / tauirise + forwardInputsIPrev[cc]
 			xidecay[cc] += -dt * xidecay[cc] / tauidecay + forwardInputsIPrev[cc]
-			
 			xi2rise[cc] += -dt * xi2rise[cc] / taui2rise + forwardInputsI2Prev[cc]
 			xi2decay[cc] += -dt * xi2decay[cc] / taui2decay + forwardInputsI2Prev[cc]
 
@@ -239,8 +221,6 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 
 				# Update membrane voltage
 				ge = (xedecay[cc] - xerise[cc]) / (tauedecay - tauerise)
-				# gi = (xidecay[cc] - xirise[cc]) / (tauidecay - tauirise)
-				
 				gi1 = (xidecay[cc] - xirise[cc]) / (tauidecay - tauirise)
 				gi2 = (xi2decay[cc] - xi2rise[cc]) / (taui2decay - taui2rise)
 				gi = gi1 + gi2
@@ -278,8 +258,6 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 					@simd for dd = 1:Ncells
 						if cc <= Ne
 							forwardInputsE[dd] += weights[cc, dd]
-						# else
-						# 	forwardInputsI[dd] += weights[cc, dd]
 						elseif cc <= (Ncells-Ni2)
 							forwardInputsI[dd] += weights[cc, dd]
 						else
@@ -306,11 +284,11 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 			end	# End, iSTDP₁
 
 			# _____ iSTDP₂ _____
-			if spiked[cc] && (t > stdpdelay) && (t < stim[3, end])
+			if spiked[cc] && (t > stdpdelay) #&& (t < stim[3, end])
 				if cc <= Ne
 					# Excitatory neuron fired, modify inputs from 2nd i-population
 					@simd for dd in nzRowsByColI2E[cc]
-						weights[dd, cc] = max(weights[dd, cc] - ilamda * trace_expDecay[dd])
+						weights[dd, cc] = max(weights[dd, cc] - ilamda * trace_expDecay[dd], jei2min)
 					end
 				elseif cc > (Ncells - Ni2)
 					# 2nd i-population neuron fired, modify outputs to excitatory neurons
@@ -329,7 +307,7 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 					end
 				elseif cc > (Ncells-Ni2)
 					# 2nd i-population neuron fired, modify inputs from E neurons
-					@simd for dd in nzRowsByColEI[cc] # = 1:Ne
+					@simd for dd in nzRowsByColEI[cc]
 						weights[dd, cc] = clamp(weights[dd, cc] + eta_ie * (trace_eistdp[dd] - Adep_ie), jiemin, jiemax)
 					end
 				end
@@ -337,7 +315,7 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 
 			# ___________ vSTDP ___________
 			# vSTDP, LTD component
-			if spiked[cc] && (t > stdpdelay) && (cc < Ne)
+			if spiked[cc] && (t > stdpdelay) && (cc <= Ne)
 				@simd for dd in nzColsByRowEE[cc]
 					if u_vstdp[dd] > thetaltd
 						weights[cc, dd] = max(weights[cc, dd] - altd * (u_vstdp[dd] - thetaltd), jeemin)
@@ -346,7 +324,7 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 			end  # End, LTD
 
 			# vSTDP, LTP component
-			if (t > stdpdelay) && (cc < Ne) && (v[cc] > thetaltp) && (v_vstdp[cc] > thetaltd)
+			if (t > stdpdelay) && (cc <= Ne) && (v[cc] > thetaltp) && (v_vstdp[cc] > thetaltd)
 				@simd for dd in nzRowsByColEE[cc]
 					weights[dd, cc] = min(weights[dd, cc] + dt * altp * x_vstdp[dd] * (v[cc] - thetaltp) * (v_vstdp[cc] - thetaltd), jeemax)
 				end

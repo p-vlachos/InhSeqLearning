@@ -16,9 +16,8 @@ function makeStim(Npop::Int64, Npres::Int64; stim_rate::Float64=8.)
 	return stim
 end
 
-function makeStimSeq(Nseq::Int64, Npres::Int64; seq_len::Int64=4, stim_rate::Float64=8., overlap::Float64=0., randomize::Bool=true)
+function makeStimSeq(Nseq::Int64, Npres::Int64; seq_len::Int64=4, stim_rate::Float64=8., randomize::Bool=true)
 	# Create sequences of stimuli
-	# NOTE: "overlap" parameter might not work properly (haven't tested it)
 	Nstim::Int64 = Nseq * seq_len
 	Ntotal::Int64 = Nstim * Npres
 	stim::Matrix{Float64} = zeros(4, Ntotal)
@@ -30,11 +29,11 @@ function makeStimSeq(Nseq::Int64, Npres::Int64; seq_len::Int64=4, stim_rate::Flo
 	for ipop = 2:Ntotal
 		stim[1, ipop] = mod(ipop - 1, Nstim) + 1
 		if Nseq == 1
-			stim[2, ipop] = stim[3, ipop-1] - overlap
+			stim[2, ipop] = stim[3, ipop-1]
 		elseif mod(ipop, seq_len) == 1
 			stim[2, ipop] = (stim[3, ipop-1] + inactive)
 		else
-			stim[2, ipop] = stim[3, ipop-1] - overlap
+			stim[2, ipop] = stim[3, ipop-1]
 		end
 		stim[3, ipop] = stim[2, ipop] + active
 		stim[4, ipop] = stim_rate
@@ -176,13 +175,13 @@ function sequentialityScore(rates::Matrix{Float64}; seq_length::Int64=4)
 		if current == previous
 			continue
 		else
-			# if current != 0
+			if current != 0
 				if expectation != 0		# Check if expectations are met
 					(current == expectation) ? (hit += 1) : (miss += 1)
 				end
 				# Set expectations
 				(current in last_elements) ? (expectation = 0) : (expectation = current + 1)
-			# end
+			end
 			previous = current
 		end
 	end
@@ -196,7 +195,7 @@ function decodeActivity(rates::Matrix{Float64}; window::Int64=20)
 	(act, ind) = findmax(rates, dims=2)
 	activations::Vector{Int64} = [act[i] > low_limit ? ind[i][2] : 0 for i in 1:size(rates)[1]]
 
-	# Define a time window to avoid flickering (for weak assembly activations, should not matter for good models)
+	# Define a time window to avoid flickering (for weak assembly activations, should not matter for good models - code unchanged from H.)
     # offset = Int((activityWindow-1)/2)
     # cleaned = []
     # for i = offset+1:recordedTime-offset
@@ -225,7 +224,8 @@ function findOptimalDecoder(spikeTimes::Matrix{Float64}, popmembers::Matrix{Int6
             end
         end
     end
-	# Compare with random baseline - NOTE: Needs to be fixed
+	# Compare with random baseline - NOTE: Needs to be fixed if added
     # randScore = sequentialityScore(shuffle(sequence), seq_length=seq_length)
     return maxSeq, opt_params, sequence#, ((maxSeq - randScore)/(1 - randScore))
 end
+

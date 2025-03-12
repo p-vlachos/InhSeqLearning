@@ -1,21 +1,21 @@
 using Pkg
 Pkg.activate(".")
 using InhSequences
-using ImageFiltering
+# using ImageFiltering
 using Statistics
-using StatsBase
+# using StatsBase
 using HDF5
 
 include("quantification.jl")
 include("plots.jl")
 
 
-simulation = 6
+simulation = 11
 sim_name = string("network", simulation, "_.h5")
 sim_savedpaths = ["./networks_trained/", "./networks_trained_spontaneous/", "./networks_trained_stimulation/"]
 
 for sim_savedpath in sim_savedpaths
-    for sim = simulation:simulation
+    for sim = simulation:simulation+1
 
         if sim_savedpath == "./networks_trained/"
             sim_name = string("network_", sim,".h5")
@@ -38,7 +38,8 @@ for sim_savedpath in sim_savedpaths
         Ne = round(Int, Ncells * .8)
         Ni2 = 250
         ipopmembers = findI2populations(weights, popmembers, iipop_len=27)
-        output_dir = string("./output_analysis/simulation_", sim, "/tests/") 
+        # output_dir = string("./output_analysis/simulation_", sim, "/tests/")
+        output_dir = string("./output_analysis/simulation_", sim)
 
         if sim_savedpath == "./networks_trained/"
             # plotWeightsEE(weightsEE[:, :, 1000], name="_testinEE", output_dir=output_dir)
@@ -48,13 +49,12 @@ for sim_savedpath in sim_savedpaths
             # seq_score = sequentialityScore(getPopulationRates(times, popmembers; interval=5_000:10_000))
             seq_score, _, sequence = findOptimalDecoder(times, popmembers, interval=5_000:10_000, dt=.2)
             @info "For the ", sim_savedpath[3:end-1], " case sequentiality is: ", seq_score
-            @info sequence
-            # plotNetworkActivity(times, popmembers, ipopmembers; interval=5_000:10_000, name=string("_testinActivitySpontaneous_", sim), output_dir=output_dir)
-            # plotWeightsEE(mean(weights[popmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :], name="_testinEE", output_dir=output_dir)
-            # plotWeightsEI(mean(weights[popmembers[:, :], ipopmembers[:, :]], dims=(1, 3))[1, :, 1, :], name="_testinEI", output_dir=output_dir)
-            # plotWeightsIE(mean(weights[ipopmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :], name="_testinIE", output_dir=output_dir)
+            plotNetworkActivity(times, popmembers, ipopmembers; interval=5_000:10_000, name=string("_testinActivitySpontaneous_", sim), output_dir=output_dir)
+            plotWeightsEE(mean(weights[popmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :], name="_testinEE", output_dir=output_dir)
+            plotWeightsEI(mean(weights[popmembers[:, :], ipopmembers[:, :]], dims=(1, 3))[1, :, 1, :], name="_testinEI", output_dir=output_dir)
+            plotWeightsIE(mean(weights[ipopmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :], name="_testinIE", output_dir=output_dir)
         else
-            # plotNetworkActivity(times, popmembers, ipopmembers; interval=5_000:10_000, name=string("_testinActivityStimulation_", sim), output_dir=output_dir)
+            plotNetworkActivity(times, popmembers, ipopmembers; interval=5_000:10_000, name=string("_testinActivityStimulation_", sim), output_dir=output_dir)
             # seq_score = sequentialityScore(getPopulationRates(times, popmembers; interval=5_000:10_000))
             seq_score, _, _ = findOptimalDecoder(times, popmembers, interval=5_000:10_000, dt=.2)
             @info "For the ", sim_savedpath[3:end-1], " case sequentiality is: ", seq_score

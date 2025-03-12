@@ -4,7 +4,7 @@ using GLMakie
 using Colors
 
 
-function plotNetworkActivity(times::Matrix{Float64}, popmembers::Matrix{Int64}, ipopmembers::Matrix{Int64}; interval::AbstractVector, name::AbstractString, output_dir::AbstractString="./output_analysis/")
+function plotNetworkActivity(times::Matrix{Float64}, popmembers::Matrix{Int64}, ipopmembers::Matrix{Int64}; seq_length::Int64=4, interval::AbstractVector, name::AbstractString, output_dir::AbstractString="./output_analysis/")
     Ncells::Int64 = size(times)[1]
     Ne::Int64 = round(Int, Ncells*0.8)
     Ni2::Int64 = 250
@@ -27,13 +27,13 @@ function plotNetworkActivity(times::Matrix{Float64}, popmembers::Matrix{Int64}, 
     end
 
     # Plot params
-    ytick_seq::Vector{Int64} = zeros(10)
+    ytick_seq::Vector{Int64} = zeros(round(Int, Npop/seq_length)*2)
     rowcount::Int64 = 1
     ytickcount::Int64 = 1
 
     fig = Figure(resolution=(1080, 720))
     ax = Axis(fig[1, 1], xlabel=L"\text{simulation time (s)}", ylabel=L"\text{sequences (neurons)}", xlabelsize=labelsize, ylabelsize=labelsize,
-                xticks=(plot_interval, [L"%$(x)" for x = 1:length(plot_interval)]), xticklabelsize=ticklabelsize, xgridvisible=false,
+                xticks=(plot_interval, [L"%$(x)" for x = 0:length(plot_interval)-1]), xticklabelsize=ticklabelsize, xgridvisible=false,
                 yticklabelsize=ticklabelsize, ygridvisible=false,
                 limits=(minimum(interval), maximum(interval), 1, ylim_max))
     # Excitatoy assembly members
@@ -46,12 +46,12 @@ function plotNetworkActivity(times::Matrix{Float64}, popmembers::Matrix{Int64}, 
             scatter!(ax, x_vals, y_vals, color=ColorSchemes.Blues[7], markersize=markersize)
             rowcount += 1
         end
-        if mod(pp, 4) == 0
+        if mod(pp, seq_length) == 0
             hlines!(ax, rowcount, linewidth=linewidth*.8, color=ColorSchemes.Blues[7])
         else
             hlines!(ax, rowcount, linewidth=linewidth*.3, color=ColorSchemes.Blues[7])
         end
-        if mod(pp+2, 4) == 0
+        if mod(pp+2, seq_length) == 0
             ytick_seq[ytickcount] = rowcount
             ytickcount += 1
         end
@@ -82,47 +82,48 @@ function plotNetworkActivity(times::Matrix{Float64}, popmembers::Matrix{Int64}, 
             scatter!(ax, x_vals, y_vals, color=ColorSchemes.Reds[6], markersize=markersize)
             rowcount += 1
         end
-        if mod(pp, 4) == 0
+        if mod(pp, seq_length) == 0
             hlines!(ax, rowcount, linewidth=linewidth*.3, color=ColorSchemes.Reds[9])
         end
-        if mod(pp+2, 4) == 0
+        if mod(pp+2, seq_length) == 0
             ytick_seq[ytickcount] = rowcount
             ytickcount += 1
         end
     end
-    ax.yticks = (ytick_seq, [L"\text{A}", L"\text{B}", L"\text{C}", L"\text{D}", L"\text{E}", L"\text{A}", L"\text{B  }", L"\text{C}", L"\text{D  }", L"\text{E}"])
-    
+
+    # ax.yticks = (ytick_seq, [L"\text{A}", L"\text{B}", L"\text{C}", L"\text{D}", L"\text{E}", L"\text{A}", L"\text{B  }", L"\text{C}", L"\text{D  }", L"\text{E}"])
+    ytick_labels::Vector{Char} = [Char(i+64) for i in 1:(round(Int, Npop/seq_length))]
+    ytick_labels = vcat(ytick_labels, ytick_labels)
+    ax.yticks = (ytick_seq, [L"\text{%$(x)}" for x in ytick_labels])
+
     (!isdir(output_dir)) && (mkpath(output_dir))
     save(joinpath(output_dir, string("network_activity", name, ".png")), fig)
 end
 
-function plotWeightsEE(weightsEE::Matrix{Float64}; name::AbstractString, output_dir::AbstractString="./output_analysis/")
+function plotWeightsEE(weightsEE::Matrix{Float64}; seq_length::Int64=4, name::AbstractString, output_dir::AbstractString="./output_analysis/")
     cl1 = ColorScheme(range(colorant"gray5", colorant"gray80", length=100))
     cl_exc = ColorScheme(range(colorant"gray80", colorant"dodgerblue4", length=100))
     excitation_cs = vcat(get(cl1, LinRange(0, 1, 100)), get(cl_exc, LinRange(0, 1, 100)))
 
+    Npop::Int64 = size(weightsEE)[1]
+    line_positions::Vector{Float64} = collect(seq_length+.5:seq_length:Npop+.5)
+
     labelsize::Int64 = 24
     ticklabelsize::Int64 = 22
     linewidth::Float64 = 2.
-    markersize::Float64 = 1.
 
     fig = Figure(resolution=(920, 720))
     ax = Axis(fig[1, 1], xlabel=L"\text{presynaptic }E\text{-assembly}", ylabel=L"\text{postsynaptic }E\text{-assembly}", xlabelsize=labelsize, ylabelsize=labelsize,
-                xticks=(1:4:20, [L"%$(x)" for x=1:4:20]), xticklabelsize=ticklabelsize, xgridvisible=false,
-                yticks=(1:4:20, [L"%$(x)" for x=1:4:20]), yticklabelsize=ticklabelsize, ygridvisible=false)
+                xticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), xticklabelsize=ticklabelsize, xgridvisible=false,
+                yticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), yticklabelsize=ticklabelsize, ygridvisible=false)
     ht = heatmap!(ax, weightsEE, colormap=excitation_cs)
-    hlines!([4.5, 8.5, 12.5, 16.5], linewidth=linewidth, color=:firebrick, linestyle=:dot)
-    vlines!([4.5, 8.5, 12.5, 16.5], linewidth=linewidth, color=:firebrick, linestyle=:dot)
+    hlines!(line_positions, linewidth=linewidth, color=:firebrick, linestyle=:dot)
+    vlines!(line_positions, linewidth=linewidth, color=:firebrick, linestyle=:dot)
 
-    vlines!(4.5, ymin=0., ymax=.4, linewidth=linewidth, color=:firebrick)
-    vlines!(8.5, ymin=.2, ymax=.6, linewidth=linewidth, color=:firebrick)
-    vlines!(12.5, ymin=.4, ymax=.8, linewidth=linewidth, color=:firebrick)
-    vlines!(16.5, ymin=.6, ymax=1., linewidth=linewidth, color=:firebrick)
-
-    hlines!(4.5, xmin=0., xmax=.4, linewidth=linewidth, color=:firebrick)
-    hlines!(8.5, xmin=.2, xmax=.6, linewidth=linewidth, color=:firebrick)
-    hlines!(12.5, xmin=.4, xmax=.8, linewidth=linewidth, color=:firebrick)
-    hlines!(16.5, xmin=.6, xmax=1., linewidth=linewidth, color=:firebrick)
+    for (ind, ln) in enumerate(line_positions)
+        vlines!(ln, ymin=(ind-1)*seq_length/Npop, ymax=ind*seq_length/Npop, linewidth=linewidth, color=:firebrick)
+        hlines!(ln, xmin=(ind-1)*seq_length/Npop, xmax=ind*seq_length/Npop, linewidth=linewidth, color=:firebrick)
+    end
 
     Colorbar(fig[1, 2], ht, label=L"\text{coupling strength (pF)}", height=Relative(1.), labelsize=labelsize, ticklabelsize=ticklabelsize)
 
@@ -131,33 +132,30 @@ function plotWeightsEE(weightsEE::Matrix{Float64}; name::AbstractString, output_
 end
 
 
-function plotWeightsIE(weightsIE::Matrix{Float64}; name::AbstractString, output_dir::AbstractString="./output_analysis/")
+function plotWeightsIE(weightsIE::Matrix{Float64}; seq_length::Int64=4, name::AbstractString, output_dir::AbstractString="./output_analysis/")
     cl1 = ColorScheme(range(colorant"gray5", colorant"gray80", length=100))
     cl_inh = ColorScheme(range(colorant"gray80", colorant"firebrick", length=100))
     inhibition_cs = vcat(get(cl1, LinRange(0, 1, 100)), get(cl_inh, LinRange(0, 1, 100)))
 
+    Npop::Int64 = size(weightsIE)[1]
+    line_positions::Vector{Float64} = collect(seq_length+.5:seq_length:Npop+.5)
+
     labelsize::Int64 = 24
     ticklabelsize::Int64 = 22
     linewidth::Float64 = 2.
-    markersize::Float64 = 1.
-
+    
     fig = Figure(resolution=(920, 720))
     ax = Axis(fig[1, 1], xlabel=L"\text{presynaptic }E \text{-assembly}", ylabel=L"\text{postsynaptic }I_2 \text{-assembly}", xlabelsize=labelsize, ylabelsize=labelsize,
-                xticks=(1:4:20, [L"%$(x)" for x=1:4:20]), xticklabelsize=ticklabelsize, xgridvisible=false,
-                yticks=(1:4:20, [L"%$(x)" for x=1:4:20]), yticklabelsize=ticklabelsize, ygridvisible=false)
+                xticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), xticklabelsize=ticklabelsize, xgridvisible=false,
+                yticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), yticklabelsize=ticklabelsize, ygridvisible=false)
     ht = heatmap!(ax, weightsIE, colormap=inhibition_cs)
-    hlines!([4.5, 8.5, 12.5, 16.5], linewidth=linewidth, color=:dodgerblue4, linestyle=:dot)
-    vlines!([4.5, 8.5, 12.5, 16.5], linewidth=linewidth, color=:dodgerblue4, linestyle=:dot)
+    hlines!(line_positions, linewidth=linewidth, color=:dodgerblue4, linestyle=:dot)
+    vlines!(line_positions, linewidth=linewidth, color=:dodgerblue4, linestyle=:dot)
 
-    vlines!(4.5, ymin=0., ymax=.4, linewidth=linewidth, color=:dodgerblue4)
-    vlines!(8.5, ymin=.2, ymax=.6, linewidth=linewidth, color=:dodgerblue4)
-    vlines!(12.5, ymin=.4, ymax=.8, linewidth=linewidth, color=:dodgerblue4)
-    vlines!(16.5, ymin=.6, ymax=1., linewidth=linewidth, color=:dodgerblue4)
-
-    hlines!(4.5, xmin=0., xmax=.4, linewidth=linewidth, color=:dodgerblue4)
-    hlines!(8.5, xmin=.2, xmax=.6, linewidth=linewidth, color=:dodgerblue4)
-    hlines!(12.5, xmin=.4, xmax=.8, linewidth=linewidth, color=:dodgerblue4)
-    hlines!(16.5, xmin=.6, xmax=1., linewidth=linewidth, color=:dodgerblue4)
+    for (ind, ln) in enumerate(line_positions)
+        vlines!(ln, ymin=(ind-1)*seq_length/Npop, ymax=ind*seq_length/Npop, linewidth=linewidth, color=:dodgerblue4)
+        hlines!(ln, xmin=(ind-1)*seq_length/Npop, xmax=ind*seq_length/Npop, linewidth=linewidth, color=:dodgerblue4)
+    end
 
     Colorbar(fig[1, 2], ht, label=L"\text{coupling strength (pF)}", height=Relative(1.), labelsize=labelsize, ticklabelsize=ticklabelsize)
 
@@ -166,33 +164,30 @@ function plotWeightsIE(weightsIE::Matrix{Float64}; name::AbstractString, output_
 end
 
 
-function plotWeightsEI(weightsEI::Matrix{Float64}; name::AbstractString, output_dir::AbstractString="./output_analysis/")
+function plotWeightsEI(weightsEI::Matrix{Float64}; seq_length::Int64=4, name::AbstractString, output_dir::AbstractString="./output_analysis/")
     cl1 = ColorScheme(range(colorant"gray5", colorant"gray80", length=100))
     cl_inh = ColorScheme(range(colorant"gray80", colorant"dodgerblue2", length=100))
     inhibition_cs = vcat(get(cl1, LinRange(0, 1, 100)), get(cl_inh, LinRange(0, 1, 100)))
 
+    Npop::Int64 = size(weightsEI)[1]
+    line_positions::Vector{Float64} = collect(seq_length+.5:seq_length:Npop+.5)
+
     labelsize::Int64 = 24
     ticklabelsize::Int64 = 22
     linewidth::Float64 = 2.
-    markersize::Float64 = 1.
 
     fig = Figure(resolution=(920, 720))
     ax = Axis(fig[1, 1], xlabel=L"\text{presynaptic }E \text{-assembly}", ylabel=L"\text{postsynaptic }I_2 \text{-assembly}", xlabelsize=labelsize, ylabelsize=labelsize,
-                xticks=(1:4:20, [L"%$(x)" for x=1:4:20]), xticklabelsize=ticklabelsize, xgridvisible=false,
-                yticks=(1:4:20, [L"%$(x)" for x=1:4:20]), yticklabelsize=ticklabelsize, ygridvisible=false)
+                xticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), xticklabelsize=ticklabelsize, xgridvisible=false,
+                yticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), yticklabelsize=ticklabelsize, ygridvisible=false)
     ht = heatmap!(ax, weightsEI, colormap=inhibition_cs)
-    hlines!([4.5, 8.5, 12.5, 16.5], linewidth=linewidth, color=:firebrick, linestyle=:dot)
-    vlines!([4.5, 8.5, 12.5, 16.5], linewidth=linewidth, color=:firebrick, linestyle=:dot)
+    hlines!(line_positions, linewidth=linewidth, color=:firebrick, linestyle=:dot)
+    vlines!(line_positions, linewidth=linewidth, color=:firebrick, linestyle=:dot)
 
-    vlines!(4.5, ymin=0., ymax=.4, linewidth=linewidth, color=:firebrick)
-    vlines!(8.5, ymin=.2, ymax=.6, linewidth=linewidth, color=:firebrick)
-    vlines!(12.5, ymin=.4, ymax=.8, linewidth=linewidth, color=:firebrick)
-    vlines!(16.5, ymin=.6, ymax=1., linewidth=linewidth, color=:firebrick)
-
-    hlines!(4.5, xmin=0., xmax=.4, linewidth=linewidth, color=:firebrick)
-    hlines!(8.5, xmin=.2, xmax=.6, linewidth=linewidth, color=:firebrick)
-    hlines!(12.5, xmin=.4, xmax=.8, linewidth=linewidth, color=:firebrick)
-    hlines!(16.5, xmin=.6, xmax=1., linewidth=linewidth, color=:firebrick)
+    for (ind, ln) in enumerate(line_positions)
+        vlines!(ln, ymin=(ind-1)*seq_length/Npop, ymax=ind*seq_length/Npop, linewidth=linewidth, color=:firebrick)
+        hlines!(ln, xmin=(ind-1)*seq_length/Npop, xmax=ind*seq_length/Npop, linewidth=linewidth, color=:firebrick)
+    end
 
     Colorbar(fig[1, 2], ht, label=L"\text{coupling strength (pF)}", height=Relative(1.), labelsize=labelsize, ticklabelsize=ticklabelsize)
 
