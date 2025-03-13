@@ -6,8 +6,8 @@ using Colors
 
 function plotNetworkActivity(times::Matrix{Float64}, popmembers::Matrix{Int64}, ipopmembers::Matrix{Int64}; seq_length::Int64=4, interval::AbstractVector, name::AbstractString, output_dir::AbstractString="./output_analysis/")
     Ncells::Int64 = size(times)[1]
-    Ne::Int64 = round(Int, Ncells*0.8)
-    Ni2::Int64 = 250
+    Ne::Int64 = round(Int, Ncells*.8)
+    Ni2::Int64 = round(Int, (Ncells*0.2)/3)
     Npop::Int64 = size(popmembers, 2)
     Nmembers_max::Int64 = size(popmembers, 1)
     Ni_members::Int64 = 27

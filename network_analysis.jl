@@ -10,12 +10,12 @@ include("quantification.jl")
 include("plots.jl")
 
 
-simulation = 11
+simulation = 1
 sim_name = string("network", simulation, "_.h5")
 sim_savedpaths = ["./networks_trained/", "./networks_trained_spontaneous/", "./networks_trained_stimulation/"]
 
 for sim_savedpath in sim_savedpaths
-    for sim = simulation:simulation+1
+    for sim = simulation:simulation
 
         if sim_savedpath == "./networks_trained/"
             sim_name = string("network_", sim,".h5")
@@ -36,8 +36,8 @@ for sim_savedpath in sim_savedpaths
 
         Ncells = size(weights)[1]
         Ne = round(Int, Ncells * .8)
-        Ni2 = 250
-        ipopmembers = findI2populations(weights, popmembers, iipop_len=27)
+        Ni2 = 93
+        ipopmembers = findI2populations(weights, popmembers, iipop_len=27, Ni2=Ni2)
         # output_dir = string("./output_analysis/simulation_", sim, "/tests/")
         output_dir = string("./output_analysis/simulation_", sim)
 

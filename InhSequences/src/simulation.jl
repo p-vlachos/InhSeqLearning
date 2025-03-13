@@ -24,13 +24,6 @@ function simnew(stim::Matrix{Float64}, T::Int64; random_seed::Int64=2817)
 	weights[diagind(weights)] .= 0.
 
 	# --- Populations ---
-	# Npop::Int64 = maximum(Int, stim[1, :])	# Number of assemblies
-	# popmembers::Matrix{Int64} = zeros(Int, Nmaxmembers, Npop)	# Contains indexes of neurons for each population
-	# @simd for pp = 1:Npop
-	# 	members::Vector{Int64} = findall(rand(Ne) .< pmembership)
-	# 	popmembers[1:length(members), pp] .= members
-	# end
-	
 	# Non-overlapping assemblies of Nmaxmembers neurons each
 	Npop::Int64 = maximum(Int, stim[1, :])	# Number of assemblies
 	popmembers::Matrix{Int64} = reshape(shuffle(1:(Npop*Nmaxmembers)), (Nmaxmembers, Npop))	# Contains indexes of neurons for each population
@@ -284,7 +277,7 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 			end	# End, iSTDP₁
 
 			# _____ iSTDP₂ _____
-			if spiked[cc] && (t > stdpdelay) #&& (t < stim[3, end])
+			if spiked[cc] && (t > stdpdelay) && (t < stim[3, end])
 				if cc <= Ne
 					# Excitatory neuron fired, modify inputs from 2nd i-population
 					@simd for dd in nzRowsByColI2E[cc]
