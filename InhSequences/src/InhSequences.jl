@@ -15,6 +15,6 @@ module InhSequences
 
     export simnew, sim
     export makeStim, makeStimSeq, makeStimSeq_brief
-    export findI2populations, convolveSpikes, getPopulationRates, sequentialityScore, getPopulationBinRates, findOptimalDecoder
+    export findI2populations, convolveSpikes, binRates, getPopulationRates, sequentialityScore, getPopulationBinRates, findOptimalDecoder
     export NeuronalParams, SynapticParams, PlasticityParams
 end # module InhSequences

@@ -1,8 +1,8 @@
 @with_kw struct InitializationParameters
 	#  Parameters needed to generate weight matrix
-	Ne::Int64 = 4000		    	# Excitatory no. neurons
-	Ni::Int64 = round(Int, Ne/4) 	# Total Inhibitory no. neurons
-	Ni2::Int64 = round(Int, Ni/3) 	# Inhibitory I₂ no. neurons
+	Ne::Int64 = 3000		    	# Excitatory no. neurons
+	Ni::Int64 = 750 				# Total Inhibitory no. neurons
+	Ni2::Int64 = 250 				# Inhibitory I₂ no. neurons
 	jee0::Float64 = 2.86 	    	# Initial E➡E strength (pF)
 	jei0::Float64 = 48.7    		# Initial I➡E strength (pF)
 	jie::Float64 = 1.27 	    	# Initial E➡I₁ strength (pF)
@@ -73,12 +73,12 @@ end
 	eta::Float64 = 1. 	    		# iSTDP₁ learning rate (pA)
 	r0::Float64 = .003 		    	# Target rate (kHz)
 	# --- iSTDP₂ ---
-	tau_i_r::Float64 = 60. 			# iSTDP₂ rise time constant (ms)
+	tau_i_r::Float64 = 30. 			# iSTDP₂ rise time constant (ms)
 	tau_i_d::Float64 = 200. 		# iSTDP₂ decay time constant (ms)
 	ilamda::Float64 = 5.			# iSTDP₂ learning rate
 	# --- eiSTDP ---
 	tau_ie::Float64 = 20.			# eiSTDP time constant (ms)
-	eta_ie::Float64 = .008  		# eiSTDP learning rate (pA)
+	eta_ie::Float64 = .007  		# eiSTDP learning rate (pA)
 	Adep_ie::Float64 = .12	    	# Amplitude of depression (kHz*ms; NOTE: then it has no unit (?))
 end
 

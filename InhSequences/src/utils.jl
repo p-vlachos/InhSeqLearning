@@ -51,8 +51,8 @@ end
 function makeStimSeq_brief(T::Int64; Npop::Int64=20, stim_rate::Float64=8., seq_len::Int64=4, seq_num::Int64=5, randomize=true)
 	# Create sequences of stimuli
 	stim_delay::Float64 = 1_000. 	# Should be greater than or equal to 'stdpdelay' (ms)
-	stim_duration::Float64 = 30. 	# Stimulation period for each assembly (ms)
-	stim_interval::Float64 = 600.	# Interval between each assembly stimulation (ms)
+	stim_duration::Float64 = 100. 	# Stimulation period for each assembly (ms)
+	stim_interval::Float64 = 400.	# Interval between each assembly stimulation (ms)
 
 	Nstim::Int64 = seq_len * seq_num
 	Ntotal::Int64 = round(Int, (T - stim_delay) / stim_interval)
@@ -124,6 +124,32 @@ function convolveSpikes(spikeTimes::Matrix{Float64}; interval::AbstractVector, s
 	else
 		return rate
 	end
+end
+
+function binRates(spikeTimes::Matrix{Float64}; interval::AbstractVector, dt::Float64=.125, window::Int64=100)
+	Ncells::Int64 = size(spikeTimes)[1]
+	Nsteps::Int64 = round(Int, length(interval) / dt)
+	rates::Matrix{Int64} = zeros(Ncells, Nsteps)
+	# Compute instantaneous population rates
+	for cc = 1:Ncells
+		for tt in filter(i->(interval[1]<i<interval[end]), spikeTimes[cc, :])
+			((tt - interval[1]) < dt) && (continue)
+			rates[cc, round(Int, (tt - interval[1]) / dt)] += 1
+		end
+	end
+	# Compute the average over each millisecond
+	binSize::Int64 = round(Int, 1/dt)			# By default equal to 1 ms
+	avg_rates::Matrix{Float64} = zeros(Ncells, round(Int, Nsteps/binSize))
+	for (ind, tt) in enumerate(collect(binSize:binSize:Nsteps))
+		avg_rates[:, ind] .= vec(mean(rates[:, tt-binSize+1:tt], dims=2))
+	end
+	avg_rates *= 1000	# Convert to Hz
+	# Compute the smooth rates for each population
+	smooth_rates::Matrix{Float64} = zeros(Ncells, round(Int, Nsteps/binSize))
+	for cc = 1:Ncells
+		smooth_rates[cc, :] = movavg(avg_rates[cc, :], window).x
+	end
+	return smooth_rates
 end
 
 function getPopulationRates(spikeTimes::Matrix{Float64}, popmembers::Matrix{Int64}; interval::AbstractVector, sigma::Float64=5., gaussian=true)

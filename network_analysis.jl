@@ -9,20 +9,23 @@ using HDF5
 include("quantification.jl")
 include("plots.jl")
 
-
 simulation = 1
-sim_name = string("network", simulation, "_.h5")
-sim_savedpaths = ["./networks_trained/", "./networks_trained_spontaneous/", "./networks_trained_stimulation/"]
+# sim_name = string("network", simulation, "_.h5")
+# sim_savedpaths = ["./networks_trained/", "./networks_trained_spontaneous/", "./networks_trained_stimulation/"]
+sim_savedpaths = ["./networks_trained_spontaneous/", "./networks_trained_stimulation/"]
 
 for sim_savedpath in sim_savedpaths
     for sim = simulation:simulation
 
-        if sim_savedpath == "./networks_trained/"
-            sim_name = string("network_", sim,".h5")
-        elseif sim_savedpath == "./networks_trained_spontaneous/"
-            sim_name = string("network_", sim,"_spontaneous.h5")
+        # if sim_savedpath == "./networks_trained/"
+        #     sim_name = string("network_", sim,".h5")
+        # else  _i1STDP-knockout
+        if sim_savedpath == "./networks_trained_spontaneous/"
+            # sim_name = string("network_", sim,"_spontaneous.h5")
+            sim_name = string("network_", sim,"_i1STDP-knockout_spontaneous.h5")
         else
-            sim_name = string("network_", sim,"_stimulation.h5")
+            # sim_name = string("network_", sim,"_stimulation.h5")
+            sim_name = string("network_", sim,"_i1STDP-knockout_stimulation.h5")
         end
 
         fid = h5open(joinpath(sim_savedpath, sim_name), "r")
@@ -35,28 +38,24 @@ for sim_savedpath in sim_savedpaths
         close(fid)
 
         Ncells = size(weights)[1]
-        Ne = round(Int, Ncells * .8)
-        Ni2 = 93
+        Ne = 3000
+        Ni2 = 750
         ipopmembers = findI2populations(weights, popmembers, iipop_len=27, Ni2=Ni2)
         # output_dir = string("./output_analysis/simulation_", sim, "/tests/")
         output_dir = string("./output_analysis/simulation_", sim)
 
-        if sim_savedpath == "./networks_trained/"
-            # plotWeightsEE(weightsEE[:, :, 1000], name="_testinEE", output_dir=output_dir)
-            # plotWeightsEI(mean(weightsEI[ipopmembers[:, :] .- (Ncells-Ni2), :, 1000], dims=1)[1, :, :], name="_testinEI", output_dir=output_dir)
-            # plotWeightsIE(mean(weightsIE[ipopmembers[:, :] .- Ne, :, 1000], dims=1)[1, :, :], name="_testinIE", output_dir=output_dir)
-        elseif sim_savedpath == "./networks_trained_spontaneous/"
+        if sim_savedpath == "./networks_trained_spontaneous/"
             # seq_score = sequentialityScore(getPopulationRates(times, popmembers; interval=5_000:10_000))
-            seq_score, _, sequence = findOptimalDecoder(times, popmembers, interval=5_000:10_000, dt=.2)
+            seq_score, _, sequence = findOptimalDecoder(times, popmembers, interval=5_000:20_000, dt=.125, seq_length=3)
             @info "For the ", sim_savedpath[3:end-1], " case sequentiality is: ", seq_score
-            plotNetworkActivity(times, popmembers, ipopmembers; interval=5_000:10_000, name=string("_testinActivitySpontaneous_", sim), output_dir=output_dir)
-            plotWeightsEE(mean(weights[popmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :], name="_testinEE", output_dir=output_dir)
-            plotWeightsEI(mean(weights[popmembers[:, :], ipopmembers[:, :]], dims=(1, 3))[1, :, 1, :], name="_testinEI", output_dir=output_dir)
-            plotWeightsIE(mean(weights[ipopmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :], name="_testinIE", output_dir=output_dir)
+            plotNetworkActivity(times, popmembers, ipopmembers; interval=5_000:20_000, seq_length=3, name=string("_testinActivitySpontaneous_", sim), output_dir=output_dir)
+            plotWeightsEE(mean(weights[popmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :], name="_testinEE", output_dir=output_dir, seq_length=3)
+            plotWeightsEI(mean(weights[popmembers[:, :], ipopmembers[:, :]], dims=(1, 3))[1, :, 1, :], name="_testinEI", output_dir=output_dir, seq_length=3)
+            plotWeightsIE(mean(weights[ipopmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :], name="_testinIE", output_dir=output_dir, seq_length=3)
         else
-            plotNetworkActivity(times, popmembers, ipopmembers; interval=5_000:10_000, name=string("_testinActivityStimulation_", sim), output_dir=output_dir)
+            plotNetworkActivity(times, popmembers, ipopmembers; interval=5_000:20_000, seq_length=3, name=string("_testinActivityStimulation_", sim), output_dir=output_dir)
             # seq_score = sequentialityScore(getPopulationRates(times, popmembers; interval=5_000:10_000))
-            seq_score, _, _ = findOptimalDecoder(times, popmembers, interval=5_000:10_000, dt=.2)
+            seq_score, _, _ = findOptimalDecoder(times, popmembers, interval=5_000:20_000, dt=.125, seq_length=3)
             @info "For the ", sim_savedpath[3:end-1], " case sequentiality is: ", seq_score
         end
     end

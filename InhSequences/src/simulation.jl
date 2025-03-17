@@ -286,7 +286,7 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 				elseif cc > (Ncells - Ni2)
 					# 2nd i-population neuron fired, modify outputs to excitatory neurons
 					@simd for dd in nzColsByRowI2E[cc]
-						weights[cc, dd] = min(weights[cc, dd] + ilamda * trace_expDecay[dd], jeimax)
+						weights[cc, dd] = min(weights[cc, dd] + ilamda * trace_expDecay[dd], jei2max)
 					end
 				end
 			end # End, iSTDP₂
