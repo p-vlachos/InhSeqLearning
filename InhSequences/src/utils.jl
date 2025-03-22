@@ -126,11 +126,11 @@ function convolveSpikes(spikeTimes::Matrix{Float64}; interval::AbstractVector, s
 	end
 end
 
-function binRates(spikeTimes::Matrix{Float64}; interval::AbstractVector, dt::Float64=.125, window::Int64=100)
+function binRates(spikeTimes::Matrix{Float64}; interval::AbstractVector, dt::Float64=.125, window::Int64=20)
 	Ncells::Int64 = size(spikeTimes)[1]
 	Nsteps::Int64 = round(Int, length(interval) / dt)
 	rates::Matrix{Int64} = zeros(Ncells, Nsteps)
-	# Compute instantaneous population rates
+	# Compute spike count per ms
 	for cc = 1:Ncells
 		for tt in filter(i->(interval[1]<i<interval[end]), spikeTimes[cc, :])
 			((tt - interval[1]) < dt) && (continue)
@@ -141,7 +141,7 @@ function binRates(spikeTimes::Matrix{Float64}; interval::AbstractVector, dt::Flo
 	binSize::Int64 = round(Int, 1/dt)			# By default equal to 1 ms
 	avg_rates::Matrix{Float64} = zeros(Ncells, round(Int, Nsteps/binSize))
 	for (ind, tt) in enumerate(collect(binSize:binSize:Nsteps))
-		avg_rates[:, ind] .= vec(mean(rates[:, tt-binSize+1:tt], dims=2))
+		avg_rates[:, ind] .= vec(sum(rates[:, tt-binSize+1:tt], dims=2))
 	end
 	avg_rates *= 1000	# Convert to Hz
 	# Compute the smooth rates for each population
@@ -178,9 +178,9 @@ function getPopulationBinRates(spikeTimes::Matrix{Float64}, popmembers::Matrix{I
 	binSize::Int64 = round(Int, 1/dt)			# By default equal to 1 ms
 	avg_rates::Matrix{Float64} = zeros(round(Int, Nsteps/binSize), Npop)
 	for (ind, tt) in enumerate(collect(binSize:binSize:Nsteps))
-		avg_rates[ind, :] .= vec(mean(rates[tt-binSize+1:tt, :], dims=1))
+		avg_rates[ind, :] .= vec(sum(rates[tt-binSize+1:tt, :], dims=1))
 	end
-	avg_rates *= 1000/size(popmembers)[1]		# Normalize over all population size and convert to Hz
+	avg_rates *= 1000/(size(popmembers)[1])		# Normalize over all population size and convert to Hz
 	# Compute the smooth rates for each population
 	smooth_rates::Matrix{Float64} = zeros(round(Int, Nsteps/binSize), Npop)
 	for ipop = 1:Npop
@@ -234,8 +234,8 @@ function decodeActivity(rates::Matrix{Float64}; window::Int64=20)
 end
 
 function findOptimalDecoder(spikeTimes::Matrix{Float64}, popmembers::Matrix{Int64}; interval::AbstractVector, dt::Float64=.125, seq_length::Int64=4)
-    smoothingWindows::Vector{Int64} = collect(10:10:100)	# Smoothing windows for computing firing rates
-    activityWindows::Vector{Int64} = collect(3:2:19)		# Windows for determining most active population
+    smoothingWindows::Vector{Int64} = collect(50:10:150)	# Smoothing windows for computing firing rates
+    activityWindows::Vector{Int64} = collect(3:3)#:2:19)		# Windows for determining most active population
     opt_params::Vector{Float64} = zeros(2)
 	sequence::Vector = zeros(length(interval))
 	maxSeq::Float64 = 0.
