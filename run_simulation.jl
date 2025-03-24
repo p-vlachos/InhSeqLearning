@@ -15,7 +15,7 @@ random_seeds = [2061, 5987, 3642, 9465, 1837, 8174, 9729, 8537, 1835, 6935]	# Tr
 
 Nsimulations = length(random_seeds)			# Number of simulation to run
 
-stim_modes = ["spontaneous"]#, "stimulation"]	# Choose between spontaneous or brief stimulation (only for loaded networks)
+stim_modes = ["stimulation"] #["spontaneous", "stimulation"]	# Choose between spontaneous or brief stimulation (only for loaded networks)
 
 for sim_num = 1:1
 	# sim_name = string("network_", sim_num,".h5")
@@ -73,7 +73,7 @@ end
 
 # ______________________________ --- END --- ______________________________
 for stim_mode in stim_modes
-	for sim_num = 2:Nsimulations
+	for sim_num = 1:1#Nsimulations
 		for iseed in eachindex(random_seeds)
 			T = 50_000
 			if stim_mode == "stimulation"

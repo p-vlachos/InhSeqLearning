@@ -65,12 +65,12 @@ end
 ############################# --- Compute sequentiality --- ##############################
 ##########################################################################################
 
-Nsimulations = 4
+Nsimulations = 10
 Nseeds = 10
-sim_savedpaths = ["./networks_trained_spontaneous/"]#, "./networks_trained_stimulation/"]
+sim_savedpaths = ["./networks_trained_spontaneous/", "./networks_trained_stimulation/"]
 
 for sim_savedpath in sim_savedpaths
-    for sim = 2:Nsimulations
+    for sim = 1:Nsimulations
         if sim_savedpath == "./networks_trained_spontaneous/"
             sim_name = string("network_", sim,"_spontaneous")
         else
@@ -189,140 +189,65 @@ end
 ############################################################################################
 ############################################################################################
 
-#####################################################################
-# ___________ --- Make weight distribution plot --- ___________
-#####################################################################
-sim_savedpath = "./networks_trained/"
-output_dir = "./output_analysis/"
-
-# Choose the parameters
-Ncells = 3750
-Ni2 = 250
-Npop = 12
-Nsims = 10
-
-x_vals = 1:Ni2
-ie_weights = zeros(Ni2, Npop, Nsims)
-sorted_ie_weights = zeros(Ni2, Npop, Nsims)
-ie_perms = zeros(Ni2, Npop, Nsims)
-fitted_params_p = zeros(2, Npop, Nsims)
-fitted_params = zeros(8, Npop, Nsims)
-
-for sim_num = 1:Nsims
-    # Load data
-    sim_name = string("network_", sim_num,".h5")
-    fid = h5open(joinpath(sim_savedpath, sim_name), "r")
-    popmembers = read(fid["data"]["popmembers"])
-    weights = read(fid["data"]["weights"])
-    close(fid)
-
-    # Compute the power laws that fit the distributions
-    for ipop = 1:Npop
-        members = filter(i->(i>0), popmembers[:, ipop])    			# Get members of excitatory assembly
-        ie_weights[:, ipop, sim_num] .= vec(sum(weights[members, Ncells-Ni2+1:Ncells], dims=1))  # Get sum of all weights projected from each E-assemble to each 2nd ipopulation neuron
-        ie_perms[:, ipop, sim_num] .= sortperm(ie_weights[:, ipop, sim_num], rev=true)
-        sorted_ie_weights[:, ipop, sim_num] .= ie_weights[round.(Int, ie_perms[:, ipop, sim_num]), ipop, sim_num]
-        # fitted_params_p[:, ipop, sim_num] .= power_fit(x_vals, sorted_ie_weights[:, ipop, sim_num])
-        fitted_params[:, ipop, sim_num] .= poly_fit(x_vals, sorted_ie_weights[:, ipop, sim_num], 7)
-    end
-end
-
-plot_data_band_min = minimum(minimum(sorted_ie_weights, dims=3)[:, :, 1], dims=2)[:]
-plot_data_avg = mean(mean(sorted_ie_weights, dims=3)[:, :, 1], dims=2)[:]
-plot_data_band_max = maximum(maximum(sorted_ie_weights, dims=3)[:, :, 1], dims=2)[:]
-
-# f = Figure(resolution=(720, 480))
-# ax = Axis(f[1, 1], xlabel=L"I_2 \, \text{neuron index}", ylabel=L"\text{Synaptic strength (sum; pF)}",
-#                     yticks=([50, 100, 150, 200], [L"50", L"100", L"150", L"200"]),
-#                     xticks=([1, 27, 50, 100, 150, 200, 250], [L"1", L"\mathbf{27}", L"50", L"100", L"150", L"200", L"250"]),
-#                     xlabelsize=24, ylabelsize=24, xticklabelsize=18, yticklabelsize=18, limits=(0.5, 250.5, 0.5, 249))
-# band!(x_vals, plot_data_band_min, plot_data_band_max)
-# lines!(x_vals, mean(fitted_params_p[1, :, :]) .* (x_vals .^ mean(fitted_params_p[2, :, :])), linewidth=4, color=:navajowhite, label=L"y = %$(round(mean(fitted_params[1, :, :]), digits=2))\,(\pm %$(round(std(fitted_params[1, :, :]), digits=2)))\,x^{%$(round(mean(fitted_params[2, :, :]), digits=2))\,(\pm %$(round(std(fitted_params[2, :, :]), digits=2)))}")
-# # lines!(x_vals, mean(fitted_params[1, :, :]) .+ (x_vals .* mean(fitted_params[2, :, :])) .+ ((x_vals .^ 2) .* mean(fitted_params[3, :, :])) .+ ((x_vals .^ 3) .* mean(fitted_params[4, :, :])) .+ ((x_vals .^ 4) .* mean(fitted_params[5, :, :])) .+ ((x_vals .^ 5) .* mean(fitted_params[6, :, :])) .+ ((x_vals .^ 6) .* mean(fitted_params[7, :, :])) .+ ((x_vals .^ 7) .* mean(fitted_params[8, :, :])), linewidth=4, color=:gold3, label=L"7 \text{th degree polynomial}")
-# vlines!(27, ymin=0, ymax=251, linestyle=(:dash, :loose), color=:gray20)
-# text!(27, 240, text=L"\text{max slope change}", rotation=3*π/2, fontsize=22)
-# axislegend(ax, position=(.95, .95), labelsize=20, titlesize=18, L"\mathbf{\text{Fitted power law:}}", titlehalign=:left)
-# f
-# (!isdir(output_dir)) && (mkpath(output_dir))
-# save(joinpath(output_dir, string("power_fit_E_to_I2.png")), f)
-
-f = Figure(resolution=(720, 480))
-ax = Axis(f[1, 1], xlabel=L"I_2 \, \text{neuron index}", ylabel=L"\text{Synaptic strength (sum; pF)}",
-                    yticks=([50, 100, 150, 200], [L"50", L"100", L"150", L"200"]),
-                    xticks=([1, 27, 50, 100, 150, 200, 250], [L"1", L"\mathbf{27}", L"50", L"100", L"150", L"200", L"250"]),
-                    xlabelsize=24, ylabelsize=24, xticklabelsize=18, yticklabelsize=18)#, limits=(0.5, 250.5, 0.5, 249))
-band!(x_vals, plot_data_band_min, plot_data_band_max)
-# errorbars!(x_vals, plot_data_avg, plot_data_avg .- plot_data_band_min, plot_data_band_max .- plot_data_avg)
-lines!(x_vals, plot_data_avg, linewidth=4, color=:gold3, label=L"7 \text{th degree polynomial}")
-vlines!(25, ymin=0, ymax=251, linestyle=(:dash, :loose), color=:gray20)
-text!(25, 240, text=L"\text{max slope change}", rotation=3*π/2, fontsize=22)
-axislegend(ax, position=(.95, .95), labelsize=20, titlesize=18, L"\mathbf{\text{Fitted power law:}}", titlehalign=:left)
-f
-(!isdir(output_dir)) && (mkpath(output_dir))
-save(joinpath(output_dir, string("power_fit_E_to_I2.png")), f)
 
 
-#####################################################################
-#####################################################################
-sim_name = string("network_1.h5")
-sim_savedpath = "./networks_trained/"
-output_dir = "./output_analysis/"
-
+# --- Load Data ---
+sim_name = string("network_4.h5")
+sim_savedpath = string("./networks_trained/")
 fid = h5open(joinpath(sim_savedpath, sim_name), "r")
 popmembers = read(fid["data"]["popmembers"])
 weights = read(fid["data"]["weights"])
+# times = read(fid["data"]["times"])
 weightsEE = read(fid["data"]["weightsEE"])
 weightsEI = read(fid["data"]["weightsEI"])
 weightsIE = read(fid["data"]["weightsIE"])
-# times = read(fid["data"]["times"])
 close(fid)
 
-ipopmembers = findI2populations(weights, popmembers, iipop_len=25)
-popmembers = transpose(popmembers)
 
-# Create EI plot_data
-plot_data = zeros(1_000, Npop, Npop)
-for ipop = 1:Npop
-    for iipop = 1:Npop
-        plot_data[:, ipop, iipop] = mean(weightsEI[ipopmembers[:, iipop] .- (Ncells-Ni2), ipop, :], dims=1)
-    end
-end
+ipopmembers = findI2populations(weights, popmembers, iipop_len=Ni_members)
 
-
+# E
 fig = Figure()
 ax = Axis(fig[1, 1])
-
-pre = 1
-for post = 1:Npop
-    if post == pre
-        lines!(ax, plot_data[:, pre, post])
-    else
-        lines!(ax, plot_data[:, pre, post])
-    end
+for ipop = 1:Npop
+    lines!(ax, weightsEE[ipop, ipop, 1:500], color=ColorSchemes.Blues[7])
 end
 fig
 
-# Create IE plot_data
-plot_data = zeros(1_000, Npop, Npop)
-for ipop = 1:Npop
-    for iipop = 1:Npop
-        plot_data[:, ipop, iipop] = mean(weightsIE[ipopmembers[:, iipop] .- Ne, ipop, :], dims=1)
-    end
-end
-
-
-plot_data ./= 1250 
-
+# EI
 fig = Figure()
 ax = Axis(fig[1, 1])
-pre = 1
-for post = 1:Npop
-    if post == pre-1
-        lines!(ax, plot_data[:, pre, post], color=:blue)
-    elseif post == pre
-        lines!(ax, plot_data[:, pre, post], color=:red)
-    else
-        lines!(ax, plot_data[:, pre, post], color=:gray)
-    end
+for ipop = 1:Npop
+    lines!(ax, mean(weightsEI[ipopmembers[:, ipop] .- (Ncells-Ni2), ipop, 1:500], dims=1)[:], color=ColorSchemes.Blues[5])
+end
+fig
+
+# I2
+fig = Figure()
+ax = Axis(fig[1, 1])
+for ipop = 2:Npop
+    (mod(ipop, seq_length) == 1) && (continue)
+    lines!(ax, mean(weightsIE[ipopmembers[:, ipop-1] .- (Ne), ipop, 1:500], dims=1)[:], color=ColorSchemes.Reds[6])
+end
+fig
+
+for ipop = 2:Npop
+    (mod(ipop, seq_length) == 1) && (continue)
+    lines!(ax, mean(weightsIE[ipopmembers[:, ipop] .- (Ne), ipop-1, 1:500], dims=1)[:], color=:black)
+end
+fig
+
+for ipop = 1:Npop
+    # (mod(ipop, seq_length) == 1) && (continue)
+    lines!(ax, mean(weightsIE[ipopmembers[:, ipop] .- (Ne), ipop, 1:500], dims=1)[:], color=:gray70)
+end
+fig
+
+# I1
+fig = Figure()
+ax = Axis(fig[1, 1])
+for ipop = 2:Npop
+    (mod(ipop, seq_length) == 1) && (continue)
+    lines!(ax, mean(weightsIE[1:(Ncells-Ne-Ni2), ipop, 1:500], dims=1)[:], color=ColorSchemes.Reds[9])
 end
 fig

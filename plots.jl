@@ -91,7 +91,6 @@ function plotNetworkActivity(times::Matrix{Float64}, popmembers::Matrix{Int64}, 
         end
     end
 
-    # ax.yticks = (ytick_seq, [L"\text{A}", L"\text{B}", L"\text{C}", L"\text{D}", L"\text{E}", L"\text{A}", L"\text{B  }", L"\text{C}", L"\text{D  }", L"\text{E}"])
     ytick_labels::Vector{Char} = [Char(i+64) for i in 1:(round(Int, Npop/seq_length))]
     ytick_labels = vcat(ytick_labels, ytick_labels)
     ax.yticks = (ytick_seq, [L"\text{%$(x)}" for x in ytick_labels])
@@ -100,7 +99,7 @@ function plotNetworkActivity(times::Matrix{Float64}, popmembers::Matrix{Int64}, 
     save(joinpath(output_dir, string("network_activity", name, ".png")), fig)
 end
 
-function plotWeightsEE(weightsEE::Matrix{Float64}; seq_length::Int64=4, name::AbstractString, output_dir::AbstractString="./output_analysis/")
+function plotWeightsEE(weightsEE::Matrix{Float64}; seq_length::Int64=3, name::AbstractString, output_dir::AbstractString="./output_analysis/")
     cl1 = ColorScheme(range(colorant"gray5", colorant"gray80", length=100))
     cl_exc = ColorScheme(range(colorant"gray80", colorant"dodgerblue4", length=100))
     excitation_cs = vcat(get(cl1, LinRange(0, 1, 100)), get(cl_exc, LinRange(0, 1, 100)))
@@ -132,7 +131,7 @@ function plotWeightsEE(weightsEE::Matrix{Float64}; seq_length::Int64=4, name::Ab
 end
 
 
-function plotWeightsIE(weightsIE::Matrix{Float64}; seq_length::Int64=4, name::AbstractString, output_dir::AbstractString="./output_analysis/")
+function plotWeightsIE(weightsIE::Matrix{Float64}; seq_length::Int64=3, name::AbstractString, output_dir::AbstractString="./output_analysis/")
     cl1 = ColorScheme(range(colorant"gray5", colorant"gray80", length=100))
     cl_inh = ColorScheme(range(colorant"gray80", colorant"firebrick", length=100))
     inhibition_cs = vcat(get(cl1, LinRange(0, 1, 100)), get(cl_inh, LinRange(0, 1, 100)))
@@ -164,7 +163,7 @@ function plotWeightsIE(weightsIE::Matrix{Float64}; seq_length::Int64=4, name::Ab
 end
 
 
-function plotWeightsEI(weightsEI::Matrix{Float64}; seq_length::Int64=4, name::AbstractString, output_dir::AbstractString="./output_analysis/")
+function plotWeightsEI(weightsEI::Matrix{Float64}; seq_length::Int64=3, name::AbstractString, output_dir::AbstractString="./output_analysis/")
     cl1 = ColorScheme(range(colorant"gray5", colorant"gray80", length=100))
     cl_inh = ColorScheme(range(colorant"gray80", colorant"dodgerblue2", length=100))
     inhibition_cs = vcat(get(cl1, LinRange(0, 1, 100)), get(cl_inh, LinRange(0, 1, 100)))
