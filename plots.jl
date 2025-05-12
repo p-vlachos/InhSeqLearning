@@ -1,6 +1,6 @@
 using ColorSchemes
 using LaTeXStrings
-using GLMakie
+using CairoMakie
 using Colors
 
 

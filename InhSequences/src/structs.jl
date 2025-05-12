@@ -1,8 +1,8 @@
 @with_kw struct InitializationParameters
 	#  Parameters needed to generate weight matrix
-	Ne::Int64 = 3000		    	# Excitatory no. neurons
-	Ni::Int64 = 750 				# Total Inhibitory no. neurons
-	Ni2::Int64 = 250 				# Inhibitory I₂ no. neurons
+	Ne::Int64 = 4000 #3000		    	# Excitatory no. neurons
+	Ni::Int64 = 1000 #750 				# Total Inhibitory no. neurons
+	Ni2::Int64 = 500 #250 				# Inhibitory I₂ no. neurons
 	jee0::Float64 = 2.86 	    	# Initial E➡E strength (pF)
 	jei0::Float64 = 48.7    		# Initial I➡E strength (pF)
 	jie::Float64 = 1.27 	    	# Initial E➡I₁ strength (pF)
@@ -11,7 +11,7 @@
 	jii2::Float64 = 32.4	    	# I₂➡I₂ strength (not plastic; pF)
 	p::Float64 = .2		    		# Connection probability
 	pmembership::Float64 = .05  	# Probability of a neuron to belong to any assembly
-	Nmaxmembers::Int64 = 200   		# Maximum number of neurons in a population (to set size of matrix)
+	Nmaxmembers::Int64 = 300 #200   		# Maximum number of neurons in a population (to set size of matrix)
 end
 
 @with_kw struct NeuronalParameters
@@ -75,7 +75,7 @@ end
 	# --- iSTDP₂ ---
 	tau_i_r::Float64 = 30. 			# iSTDP₂ rise time constant (ms)
 	tau_i_d::Float64 = 200. 		# iSTDP₂ decay time constant (ms)
-	ilamda::Float64 = 5.			# iSTDP₂ learning rate
+	ilamda::Float64 = 1. #5.			# iSTDP₂ learning rate
 	# --- eiSTDP ---
 	tau_ie::Float64 = 20.			# eiSTDP time constant (ms)
 	eta_ie::Float64 = .007  		# eiSTDP learning rate (pA)
@@ -85,7 +85,7 @@ end
 @with_kw struct SimulationParameters
     dt::Float64 = .125            	# Integration timestep (ms)
     dtnormalize::Int64 = 20 		# How often to normalize E weights (ms)
-	stdpdelay::Int64 = 50_000 		# Time before STDP is activated, allow transients to die out (ms)
+	stdpdelay::Int64 = 10_000 		# Time before STDP is activated, allow transients to die out (ms)
 	Nspikes::Int64 = 10_000	 		# Maximum number of spikes to record per neuron
 end
 

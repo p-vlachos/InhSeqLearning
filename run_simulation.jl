@@ -10,18 +10,20 @@ sim_savedpath = "./networks_trained/"
 loadnet = false				# Choose between simulating an existing or a novel network
 savenet = true				# Save the network after stimulation
 
-random_seeds = [2061, 5987, 3642, 9465, 1837, 8174, 9729, 8537, 1835, 6935]	# Train/test seeds
-# random_seeds = [6487, 3791, 6482, 6485, 9316]	# Knockout seeds
+random_seeds = [2061, 5987, 3642, 9465, 1837, 8174, 9729, 8537, 1835, 6935, 9316, 8425, 7167, 9921, 2785, 6309, 1482]	# Train/test seeds	(no. 11 is for showing decay)
+# random_seeds = [6487, 3791, 6482, 6485]	# Knockout seeds
 
 Nsimulations = length(random_seeds)			# Number of simulation to run
 
-stim_modes = ["stimulation"] #["spontaneous", "stimulation"]	# Choose between spontaneous or brief stimulation (only for loaded networks)
+stim_modes = ["spontaneous"] #["spontaneous", "stimulation"]	# Choose between spontaneous or brief stimulation (only for loaded networks)
+
+# sim_names = ["network_eiSTDP-knockout.h5", "network_i2STDP-knockout.h5", "network_i1STDP-knockout.h5"]
 
 for sim_num = 1:1
-	# sim_name = string("network_", sim_num,".h5")
-	# sim_name = string("network_", sim_num,"_i1STDP-knockout.h5")	
+	sim_name = string("network_", sim_num,".h5")
+	# sim_name = string("network_", sim_num,"_eiSTDP-knockout.h5")
 	# sim_name = string("network_", sim_num,"_pre-train.h5")
-	sim_name = string("network_", sim_num,"_train.h5")
+	# sim_name = string("network_", sim_num,"_train.h5")
 	if loadnet
 		T = 10_000
 		if stim_mode == "stimulation"
@@ -33,8 +35,8 @@ for sim_num = 1:1
 		end
 	else
 		# Full train 4 sequences x 3 assemblies
-		# T = 1_000_000
-		T = 50_000
+		T = 1_000_000
+		# T = 50_000
 		stim = makeStimSeq(4, 20, seq_len=3)
 	end
 
@@ -56,7 +58,7 @@ for sim_num = 1:1
 			cd(string("networks_trained_", stim_mode))
 			fid = h5open(string(sim_name[1:end-3], "_", stim_mode, ".h5"), "w")
 		else
-			cd("networks_trained")
+			cd("networks_trained_original")
 			fid = h5open(sim_name,"w")
 		end
 		g = create_group(fid,"data")
@@ -73,7 +75,7 @@ end
 
 # ______________________________ --- END --- ______________________________
 for stim_mode in stim_modes
-	for sim_num = 1:1#Nsimulations
+	for sim_num = 11:11#Nsimulations
 		for iseed in eachindex(random_seeds)
 			T = 50_000
 			if stim_mode == "stimulation"
@@ -82,10 +84,11 @@ for stim_mode in stim_modes
 				stim = zeros(4, 12)		# Spontaneous activity (no stimulation)
 			end
 
-			sim_name = string("network_", sim_num,".h5")
+			sim_name = sim_names[sim_num]
+			# sim_name = string("network_", sim_num,".h5")
 
 			# Load data
-			sim_savepath = string("./networks_trained_", stim_mode, "/network_", sim_num)
+			sim_savepath = string("./networks_trained_", stim_mode, "/network_", sim_name[9:end-3])
 			fid = h5open(joinpath(sim_savedpath, sim_name), "r")
 			weights_old = read(fid["data"]["weights"])
 			popmembers = read(fid["data"]["popmembers"])

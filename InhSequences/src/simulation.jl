@@ -20,13 +20,58 @@ function simnew(stim::Matrix{Float64}, T::Int64; random_seed::Int64=2817)
 	@. weights[(Ne+1):(Ncells-Ni2), (Ncells-Ni2+1):Ncells] = jii12
 	@. weights[(Ncells-Ni2+1):Ncells, (Ncells-Ni2+1):Ncells] = jii2
 
-	weights[rand(Ncells, Ncells) .> p] .= 0.
+	# weights[rand(Ncells, Ncells) .> p] .= 0.
+
+	for i = 1:Ne
+		for j = 1:Ne
+			(rand() > p) && (weights[i, j] = 0.)	# E → E
+		end
+		for j = (Ne+1):(Ncells-Ni2)
+			(rand() > p) && (weights[i, j] = 0.)	# E → I₁
+		end
+		for j = (Ncells-Ni2+1):Ncells
+			(rand() > p) && (weights[i, j] = 0.)	# E → I₂
+		end
+	end
+
+	for i = (Ne+1):(Ncells-Ni2)
+		for j = 1:Ne
+			(rand() > p) && (weights[i, j] = 0.)	# I₁ → E
+		end
+		for j = (Ne+1):(Ncells-Ni2)
+			(rand() > p) && (weights[i, j] = 0.)	# I₁ → I₁
+		end
+		for j = (Ncells-Ni2+1):Ncells
+			(rand() > .5) && (weights[i, j] = 0.)	# I₁ → I₂
+		end
+	end
+	
+	for i = (Ncells-Ni2+1):Ncells
+		for j = 1:Ne
+			(rand() > .6) && (weights[i, j] = 0.)	# I₂ → E
+		end
+		for j = (Ne+1):(Ncells-Ni2)
+			(rand() > p) && (weights[i, j] = 0.)	# I₂ → I₁
+		end
+		for j = (Ncells-Ni2+1):Ncells
+			(rand() > p) && (weights[i, j] = 0.)	# I₂ → I₂
+		end
+	end
+	
 	weights[diagind(weights)] .= 0.
 
+	# # --- Populations ---
+	# # Non-overlapping assemblies of Nmaxmembers neurons each
+	# Npop::Int64 = maximum(Int, stim[1, :])	# Number of assemblies
+	# popmembers::Matrix{Int64} = reshape(shuffle(1:(Npop*Nmaxmembers)), (Nmaxmembers, Npop))	# Contains indexes of neurons for each population
+
 	# --- Populations ---
-	# Non-overlapping assemblies of Nmaxmembers neurons each
 	Npop::Int64 = maximum(Int, stim[1, :])	# Number of assemblies
-	popmembers::Matrix{Int64} = reshape(shuffle(1:(Npop*Nmaxmembers)), (Nmaxmembers, Npop))	# Contains indexes of neurons for each population
+	popmembers::Matrix{Int64} = zeros(Int, Nmaxmembers, Npop)	# Contains indexes of neurons for each population
+	@simd for pp = 1:Npop
+		members::Vector{Int64} = findall(rand(Ne) .< pmembership)
+		popmembers[1:length(members), pp] .= members
+	end
 
 	return sim(stim, weights, popmembers, T, random_seed=random_seed)
 end

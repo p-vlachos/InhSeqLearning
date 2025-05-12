@@ -1,3 +1,220 @@
+using Pkg
+Pkg.activate(".")
+using InhSequences
+using Statistics
+using HDF5
+
+
+##############################################################################################
+############################# --- NEW IN-DEPTH ANALYSIS HERE --- #############################
+##############################################################################################
+using CairoMakie
+using ColorSchemes
+using Colors
+
+sim_savedpath = "./networks_trained/"
+output_dir = "./output_analysis/"
+
+sim_num = 4
+sim_name = string("network_", sim_num, ".h5")
+fid = h5open(joinpath(sim_savedpath, sim_name), "r")
+popmembers = read(fid["data"]["popmembers"])
+weights = read(fid["data"]["weights"])
+weightsEE = read(fid["data"]["weightsEE"])
+weightsEI = read(fid["data"]["weightsEI"])
+weightsIE = read(fid["data"]["weightsIE"])
+times = read(fid["data"]["times"])
+close(fid)
+
+ipopmembers = findI2populations(weights, popmembers, iipop_len=25)
+Npop = size(popmembers)[2]
+Ncells = size(weights)[1]
+Ne = round(Int, Ncells*0.8)
+Ni2 = 250
+
+
+# Calculate the overlap between I2 populations
+overlapi2 = zeros(Npop, Npop)
+for ipop = 1:Npop
+	members = filter(i->i>0, ipopmembers[:, ipop])
+	for iipop = 1:Npop
+		i_members = filter(i->i>0, ipopmembers[:, iipop])
+		if ipop == iipop
+			continue
+		end
+		for i in members
+			for j in i_members
+				if i == j
+					overlapi2[ipop, iipop] += 1
+				end
+			end
+		end
+	end
+end
+
+fig = Figure(resolution = (1080, 720))
+ax = Axis(fig[1, 1], xticklabelsize=26, yticklabelsize=26,
+			title=L"\text{Overlap between I2 populations}", titlesize=36,
+			xlabel=L"\text{pop. index}", ylabel=L"\text{pop. index}",
+			xlabelsize=32, ylabelsize=32)
+
+hm = heatmap!(ax, overlapi2, colormap=Makie.Categorical(:viridis))
+Colorbar(fig[1, 2], hm, label="Overlap", labelsize=32, ticklabelsize=26)
+fig
+
+
+# Calculate the overlap between E-to-I₂ neurons (all I₂ neurons)
+
+overlapei2 = zeros(Npop, Ni2)
+
+i2ecount = zeros(Ni2, Npop)
+ei2count = zeros(Npop, Ni2)
+
+i2eweight = zeros(Ni2, Npop)
+ei2weight = zeros(Npop, Ni2)
+
+for ipop = 1:Npop
+	members = filter(i->i>0, popmembers[:, ipop])
+	for mem in members
+		for (ind, val) in enumerate((Ncells-Ni2+1):Ncells)
+			if weights[mem, val] > 0
+				ei2count[ipop, ind] += 1
+				ei2weight[ipop, ind] += weights[mem, val]
+			end
+			if weights[val, mem] > 0
+				i2ecount[ind, ipop] += 1
+				i2eweight[ind, ipop] += weights[val, mem]
+			end
+		end
+	end
+end
+
+fig = Figure(resolution = (1080, 720))
+ax = Axis(fig[1, 1], xticklabelsize=26, yticklabelsize=26,
+			title=L"\text{overlap between E-to-I2 neurons}", titlesize=36,
+			xlabel=L"\text{pop. index}", ylabel=L"\text{I2 neuron index}",
+			xlabelsize=32, ylabelsize=32)
+# hm = heatmap!(ax, ei2count, colormap=Makie.Categorical(:viridis))
+hm = heatmap!(ax, ei2weight, colormap=Makie.Categorical(:viridis))
+# hm = heatmap!(ax, i2ecount, colormap=Makie.Categorical(:viridis))
+Colorbar(fig[1, 2], hm, label=L"\text{overlap}", labelsize=32, ticklabelsize=26)
+fig
+
+
+# The correlation between the total weights and total number of synapses from E assemblies to I2 neurons
+correlation = zeros(Npop)
+for ipop = 1:Npop
+	correlation[ipop] = cor(ei2count[ipop, :], ei2weight[ipop, :])
+end
+boxplot(ones(Npop), correlation)
+
+
+# The correlation between the total weights and total number of synapses from I2 neurons to E assemblies
+correlation = zeros(Npop)
+for ipop = 1:Npop
+	correlation[ipop] = cor(i2ecount[:, ipop], i2eweight[:, ipop])
+end
+boxplot(ones(Npop), correlation)
+
+
+
+perm = zeros(Int, Npop, Ni2)
+for ipop = 1:Npop
+	perm[ipop, :] .= sortperm(ei2weight[ipop, :], rev=true)
+end
+perm
+
+correlation = zeros(Npop)
+for ipop = 1:Npop
+	correlation[ipop] = cor(ei2count[ipop, perm[:, ipop]], ei2weight[ipop, perm[:, ipop]])
+end
+boxplot(ones(Npop), correlation)
+
+
+fig = Figure(resolution = (1080, 720))
+ax = Axis(fig[1, 1], xticklabelsize=26, yticklabelsize=26)
+for ipop = 1:Npop
+	# plot!(ax, sort(ei2weight[ipop, :], rev=true), color=ColorSchemes.Reds[5], label=L"\text{E-to-I2}")
+	plot!(ax, ei2weight[ipop, perm[ipop, :]], color=ColorSchemes.Reds[5], label=L"\text{E-to-I2}")
+end
+for ipop = 1:Npop
+	plot!(ax, ei2count[ipop, perm[ipop, :]], color=ColorSchemes.Blues[5], label=L"\text{E-to-I2}")
+end
+fig
+
+
+fig = Figure(resolution = (1080, 720))
+ax = Axis(fig[1, 1], xticklabelsize=26, yticklabelsize=26)
+for ipop = 1:Npop
+	# plot!(ax, sort(ei2weight[ipop, :], rev=true), color=ColorSchemes.Reds[5], label=L"\text{E-to-I2}")
+	lines!(ax, ei2weight[ipop, perm[ipop, :]], color=ColorSchemes.Reds[5], label=L"\text{E-to-I2}")
+end
+for ipop = 1:Npop
+	lines!(ax, ei2count[ipop, perm[ipop, :]], color=ColorSchemes.Blues[5], label=L"\text{E-to-I2}")
+end
+fig
+
+
+
+
+
+
+
+
+perm = zeros(Int, Ni2, Npop)
+for ipop = 1:Npop
+	perm[:, ipop] .= sortperm(i2eweight[:, ipop], rev=true)
+end
+perm
+
+correlation = zeros(Npop)
+for ipop = 1:Npop
+	correlation[ipop] = cor(i2ecount[perm[:, ipop], ipop], i2eweight[perm[:, ipop], ipop])
+end
+boxplot(ones(Npop), correlation)
+
+
+fig = Figure(resolution = (1080, 720))
+ax = Axis(fig[1, 1], xticklabelsize=26, yticklabelsize=26)
+# for ipop = 1:Npop
+# 	plot!(ax, sort(i2eweight[:, ipop], rev=true), color=ColorSchemes.Reds[5], label=L"\text{E-to-I2}")
+# end
+# for ipop = 1:Npop
+# 	plot!(ax, sort(i2ecount[:, ipop], rev=true), color=ColorSchemes.Blues[5], label=L"\text{E-to-I2}")
+# end
+for ipop = 1:Npop
+	plot!(ax, i2eweight[perm[:, ipop], ipop], color=ColorSchemes.Reds[5], label=L"\text{E-to-I2}")
+end
+for ipop = 1:Npop
+	plot!(ax, i2ecount[perm[:, ipop], ipop], color=ColorSchemes.Blues[5], label=L"\text{E-to-I2}")
+end
+fig
+
+
+
+
+
+# Normalize the counts
+maximum(i2ecount)
+maximum(ei2count)
+
+minimum(i2ecount)
+minimum(ei2count)
+
+correlation = zeros(Npop, Npop)
+
+for ipop = 1:Npop
+	for iipop = 1:Ni2
+		if i == j
+			correlation[ipop, iipop] += 1
+		end	
+	end
+end
+
+##############################################################################################
+############################ --- Calculate cross-correlation --- #############################
+##############################################################################################
+
 sim_name = string("cross_corr_spontaneous.h5")
 sim_savedpath = "./analysis_data/"
 
@@ -116,6 +333,9 @@ fig
 
 
 
+##############################################################################################
+############################ --- Other stuff here going on --- #############################
+##############################################################################################
 
 using CairoMakie
 using ColorSchemes
@@ -219,11 +439,17 @@ for sim = simulation:simulation
 end
 
 
+###########################################################################################
+##########                              ANALYSIS                    			 ##########
+###########################################################################################
+using CairoMakie
 
 
+sim_savedpath = "./networks_trained/"
+output_dir = "./output_analysis/"
 
-
-sim_name = string("network_1.h5")
+sim_num = 17
+sim_name = string("network_", sim_num, ".h5")
 fid = h5open(joinpath(sim_savedpath, sim_name), "r")
 popmembers = read(fid["data"]["popmembers"])
 weights = read(fid["data"]["weights"])
@@ -233,9 +459,112 @@ weightsIE = read(fid["data"]["weightsIE"])
 times = read(fid["data"]["times"])
 close(fid)
 
+Npop = 12
+seq_length = 3
+Ne = 3000
+Ni2 = 250
+Ncells = 3750
+ipopmembers = findI2populations(weights, popmembers, iipop_len=25)
+
+fig = Figure()
+ax = Axis(fig[1, 1])
+
+for ipop = 2:Npop
+    (mod(ipop, seq_length) == 1) && (continue)
+    lines!(ax, mean(weightsIE[1:(Ncells-Ne-Ni2), ipop, 1:500], dims=1)[:])#, linewidth=linewidth, color=ColorSchemes.Reds[9], label=L"I_1\text{-to-}E")
+end
+fig
+
+for ipop = 2:Npop
+    (mod(ipop, seq_length) == 1) && (continue)
+    lines!(ax, mean(weightsIE[1:(Ncells-Ne-Ni2), ipop, 501:end], dims=1)[:])#, linewidth=linewidth, color=ColorSchemes.Reds[9], label=L"I_1\text{-to-}E")
+end
+fig
 
 
 
+include("plots.jl")
+
+sim_num = 17
+T = 10_000
+stim = zeros(4, 12)		# Spontaneous activity (no stimulation)
+# stim = makeStimSeq_brief(T, Npop=12, seq_len=3, seq_num=4, stim_rate=4., randomize=false)
+
+sim_name = string("network_", sim_num,".h5")
+
+# Load data
+sim_name = string("network_", sim_num, ".h5")
+fid = h5open(joinpath(sim_savedpath, sim_name), "r")
+popmembers = read(fid["data"]["popmembers"])
+weights_old = read(fid["data"]["weights"])
+# weightsEE = read(fid["data"]["weightsEE"])
+# weightsEI = read(fid["data"]["weightsEI"])
+# weightsIE = read(fid["data"]["weightsIE"])
+# times = read(fid["data"]["times"])
+close(fid)
+
+# Define here manipulations
+seq_len=3
+ipopmembers = findI2populations(weights_old, popmembers, iipop_len=25)
+Npop = size(popmembers)[2]
+Ncells = size(weights_old)[1]
+Ne = round(Int, Ncells*0.8) 
+Ni2 = 250
+last_elements = seq_len:seq_len:Npop
+# # @. weights_old[(Ncells-Ni2+1):Ncells, 1:Ne] *= 2.		# I2-to-E strength
+# # @. weights_old[(Ne+1):(Ncells-Ni2), 1:Ne] *= 0.5		# I1-to-E strength
+# for pop = 1:Npop
+# 	# @. weights_old[ipopmembers[:, pop], popmembers[:, pop]] *= .5		# I2pop-to-Epop strength (within)
+# 	# @. weights_old[(Ne+1):(Ncells-Ni2), pop] *= .5		# I1-to-Epop strength
+# 	for ipop = 1:Npop
+# 		# if ipop==pop
+# 			# continue
+# 		# end
+# 		# @. weights_old[ipopmembers[:, ipop], popmembers[:, pop]] *= .5		# I2pop-to-Epop strength (between all)
+# 		# if ipop == pop-1 && !(ipop in last_elements)			# This targets the most weakly inhibited (I2-to-E)
+# 		# 	@. weights_old[ipopmembers[:, ipop], popmembers[:, pop]] *= .5
+# 		# end
+# 		if ipop-1 == pop && !(pop in last_elements)			# This targets the most strongly inhibited (I2-to-E)
+# 			@. weights_old[ipopmembers[:, ipop], popmembers[:, pop]] *= .5
+# 		end
+# 		# if ipop == pop			
+# 		# 	# @. weights_old[popmembers[:, pop], ipopmembers[:, ipop]] *= 2.		# This targets the E-to-I2
+# 		# 	@. weights_old[ipopmembers[:, ipop], popmembers[:, pop]] *= .5		# This targets the I2-to-E
+# 		# end
+# 	end
+# end
+
+times, weights, popmembers, _, _, _ = sim(stim, weights_old, popmembers, T, random_seed=random_seeds[1])
+
+
+ipopmembers = findI2populations(weights, popmembers, iipop_len=25)
+output_dir = string("./output_analysis/testing_", sim, "/") 
+
+# weightsEE = sum(weights[popmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :] ./ count(i->i>0, weights[popmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :]
+# weightsEI = sum(weights[popmembers[:, :], ipopmembers[:, :]], dims=(1, 3))[1, :, 1, :] ./ count(i->i>0, weights[popmembers[:, :], ipopmembers[:, :]], dims=(1, 3))[1, :, 1, :]
+# weightsIE = sum(weights[ipopmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :] ./ count(i->i>0, weights[ipopmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :]
+
+mean_ee = zeros(Npop, Npop)
+mean_ie = zeros(Npop, Npop)
+mean_ei = zeros(Npop, Npop)
+for pp = 1:Npop
+	e_members = filter(i->i>0, popmembers[:, pp])
+	for ipp = 1:Npop
+		e_members_i = filter(i->i>0, popmembers[:, ipp])
+		mean_ee[pp, ipp] = sum(weights[e_members, e_members_i]) / count(i->i>0, weights[e_members, e_members_i])
+		mean_ei[pp, ipp] = sum(weights[e_members, ipopmembers[:, ipp]]) / count(i->i>0, weights[e_members, ipopmembers[:, ipp]])
+		mean_ie[pp, ipp] = sum(weights[ipopmembers[:, pp], e_members_i]) / count(i->i>0, weights[ipopmembers[:, pp], e_members_i])
+	end
+end
+
+weightsEE = mean_ee
+weightsEI = mean_ei
+weightsIE = mean_ie
+
+plotWeightsEE(weightsEE, name="_testinEE", output_dir=output_dir)
+plotWeightsIE(weightsIE, name="_testinIE", output_dir=output_dir)
+plotWeightsEI(weightsEI, name="_testinEI", output_dir=output_dir)
+plotNetworkActivity(times, popmembers, ipopmembers; interval=1:10_000, name=string("_testinActivitySpontaneous_", sim))
 
 ###########################################################################################
 ##########                              RATE MODEL                    			 ##########

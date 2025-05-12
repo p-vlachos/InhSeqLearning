@@ -15,6 +15,7 @@ output_dir = "./output_analysis/Figures"
 
 makefig_1 = true
 makefig_2 = true
+makefig_3 = true
 
 ##############################################################################################
 ######                               --- FIGURE 1 ---                                   ###### 
@@ -301,9 +302,11 @@ rowsize!(g_raster, 1, Relative(1/5))
 ################ --- Post-Training --- #################
 ########################################################
 # --- Load Data ---
+net_num = 1
+seed_num = 1
 mode = "spontaneous"
-sim_name = string("network_1_", mode, ".h5")
-sim_savedpath = string("./networks_trained_", mode, "/")
+sim_name = string("network_1_", mode, "_seed_", seed_num, ".h5")
+sim_savedpath = string("./networks_trained_", mode, "/network_", net_num, "/")
 fid = h5open(joinpath(sim_savedpath, sim_name), "r")
 popmembers = read(fid["data"]["popmembers"])
 weights = read(fid["data"]["weights"])
@@ -427,7 +430,7 @@ rowsize!(g_raster, 1, Relative(1/5))
 # Parameters
 seq_number = 1
 seq_length = 3
-interval = 14_500:15_000
+interval = 15_400:15_900
 
 rates = binRates(times, interval=interval, window=100)
 ylim_max = (Nmaxmembers*3) + (Ni_members*3)
@@ -700,7 +703,6 @@ end
 
 if makefig_2
 
-# fig = Figure(size=(4800, 3280))
 fig = Figure(size=(4800, 3800))
 
 g_model = fig[1, 1:2] = GridLayout()
@@ -713,9 +715,6 @@ g_rest = fig[3, 3:4] = GridLayout()
 labelsize = 66
 ticklabelsize = 54
 legendlabelsize = 54
-# legendticklabelsize = 54
-# colorbarlabelsize = 66
-# colorbarticklabelsize = 54
 textsize = 66
 subplotlabelsize = 66
 
@@ -745,6 +744,7 @@ hidedecorations!(ax_model)
 ##############################################################################################
 ############################# --- Histogram synaptic weights --- #############################
 ##############################################################################################
+sim_savedpath = string("./networks_trained/")
 
 # Choose the parameters
 Ncells = 3750
@@ -778,24 +778,26 @@ plot_data_band_min = minimum(minimum(sorted_ie_weights, dims=3)[:, :, 1], dims=2
 plot_data_avg = mean(mean(sorted_ie_weights, dims=3)[:, :, 1], dims=2)[:]
 plot_data_band_max = maximum(maximum(sorted_ie_weights, dims=3)[:, :, 1], dims=2)[:]
 
-ax = Axis(g_hist[1, 1], xlabel=L"I_2 \, \text{neuron index (sorted)}", ylabel=L"\Sigma \text{ synaptic strength (pF)}",
+ax = Axis(g_hist[1, 1], xlabel=L"I_2 \, \text{neuron index (sorted)}", ylabel=L"\text{mean synaptic strength (pF)}",
                 xticks=([1, 25, 50, 100, 150, 200, 250], [L"1", L"\mathbf{25}", L"50", L"100", L"150", L"200", L"250"]),
                 yticks=([50, 100, 150, 200, 250], [L"50", L"100", L"150", L"200", L"250"]),
                 xlabelsize=labelsize, ylabelsize=labelsize, xticklabelsize=ticklabelsize, yticklabelsize=ticklabelsize,
                 limits=(0., 255.5, 0.5, 255.5))
-lines!(x_vals, plot_data_avg, linewidth=linewidth, color=:gold3, label=L"\text{average values}")
 band!(x_vals, plot_data_band_min, plot_data_band_max, label=L"\text{extremum values}")
+lines!(x_vals, plot_data_avg, linewidth=linewidth*2, color=:gold3, label=L"\text{average values}")
 vlines!(25, ymin=0, ymax=251, linewidth=linewidth, linestyle=(:dash, :loose), color=:gray20)
-text!(25, 240, text=L"\text{max slope change}", rotation=3*π/2, fontsize=textsize)
+# text!(25, 240, text=L"\text{max slope change}", rotation=3*π/2, fontsize=textsize)
 axislegend(ax, position=(.95, .95), labelsize=labelsize, titlesize=textsize)
 
 ##############################################################################################
 ############################# --- Histogram synaptic weights --- #############################
 ##############################################################################################
 # --- Load Data ---
+net_num = 4
+seed_num = 1
 mode = "spontaneous"
-sim_name = string("network_4_", mode, ".h5")
-sim_savedpath = string("./networks_trained_", mode, "/")
+sim_name = string("network_", net_num,"_", mode, "_seed_", seed_num, ".h5")
+sim_savedpath = string("./networks_trained_", mode, "/network_", net_num, "/")
 fid = h5open(joinpath(sim_savedpath, sim_name), "r")
 popmembers = read(fid["data"]["popmembers"])
 weights = read(fid["data"]["weights"])
@@ -812,9 +814,9 @@ Nmaxmembers = size(popmembers, 1)
 
 ipopmembers = findI2populations(weights, popmembers, iipop_len=Ni_members)
 
-weightsEE = mean(weights[popmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :]
-weightsEI = mean(weights[popmembers[:, :], ipopmembers[:, :]], dims=(1, 3))[1, :, 1, :]
-weightsIE = mean(weights[ipopmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :]
+weightsEE = sum(weights[popmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :] ./ count(i->i>0, weights[popmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :]
+weightsEI = sum(weights[popmembers[:, :], ipopmembers[:, :]], dims=(1, 3))[1, :, 1, :] ./ count(i->i>0, weights[popmembers[:, :], ipopmembers[:, :]], dims=(1, 3))[1, :, 1, :]
+weightsIE = sum(weights[ipopmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :] ./ count(i->i>0, weights[ipopmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :]
 
 
 ########################################################
@@ -830,7 +832,8 @@ line_positions = collect(seq_length+.5:seq_length:Npop+.5)
 
 ax = Axis(g_struct[1, 1], xlabel=L"\text{presynaptic }E\text{-assembly}", ylabel=L"\text{postsynaptic }E\text{-assembly}", xlabelsize=labelsize, ylabelsize=labelsize,
             xticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), xticklabelsize=ticklabelsize, xgridvisible=false,
-            yticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), yticklabelsize=ticklabelsize, ygridvisible=false)
+            yticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), yticklabelsize=ticklabelsize, ygridvisible=false,
+            aspect=1)
 ht = heatmap!(ax, weightsEE, colormap=excitation_cs)
 hlines!(ax, line_positions, linewidth=linewidth, color=:firebrick, linestyle=:dot)
 vlines!(ax, line_positions, linewidth=linewidth, color=:firebrick, linestyle=:dot)
@@ -852,7 +855,8 @@ inhibition_cs = vcat(get(cl1, LinRange(0, 1, 100)), get(cl_inh, LinRange(0, 1, 1
     
 ax = Axis(g_struct[1, 3], xlabel=L"\text{presynaptic }I_2 \text{-assembly}", ylabel=L"\text{postsynaptic }E \text{-assembly}", xlabelsize=labelsize, ylabelsize=labelsize,
             xticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), xticklabelsize=ticklabelsize, xgridvisible=false,
-            yticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), yticklabelsize=ticklabelsize, ygridvisible=false)
+            yticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), yticklabelsize=ticklabelsize, ygridvisible=false,
+            aspect=1)
 ht = heatmap!(ax, weightsIE, colormap=inhibition_cs)
 hlines!(line_positions, linewidth=linewidth, color=:dodgerblue4, linestyle=:dot)
 vlines!(line_positions, linewidth=linewidth, color=:dodgerblue4, linestyle=:dot)
@@ -874,7 +878,8 @@ inhibition_cs = vcat(get(cl1, LinRange(0, 1, 100)), get(cl_inh, LinRange(0, 1, 1
 
 ax = Axis(g_struct[1, 5], xlabel=L"\text{presynaptic }E \text{-assembly}", ylabel=L"\text{postsynaptic }I_2 \text{-assembly}", xlabelsize=labelsize, ylabelsize=labelsize,
             xticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), xticklabelsize=ticklabelsize, xgridvisible=false,
-            yticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), yticklabelsize=ticklabelsize, ygridvisible=false)
+            yticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), yticklabelsize=ticklabelsize, ygridvisible=false,
+            aspect=1)
 ht = heatmap!(ax, weightsEI, colormap=inhibition_cs)
 hlines!(line_positions, linewidth=linewidth, color=:firebrick, linestyle=:dot)
 vlines!(line_positions, linewidth=linewidth, color=:firebrick, linestyle=:dot)
@@ -885,11 +890,6 @@ for (ind, ln) in enumerate(line_positions)
 end
 
 Colorbar(g_struct[1, 6], ht, size=colorbarsize, label=L"\text{mean coupling strength (pF)}", height=Relative(.6), labelsize=labelsize, ticklabelsize=ticklabelsize)
-
-# colgap!(g_struct, 0, Relative(.1))
-colgap!(g_struct, 2, Relative(.1))
-colgap!(g_struct, 4, Relative(.1))
-# colgap!(g_struct, 6, Relative(.1))
 
 ##############################################################################################
 ############################# --- Structure during learning --- ##############################
@@ -981,7 +981,7 @@ Label(g_learn[1:2, 1], L"\text{mean synaptic strength (pF)}",
 ############################### --- Structure during rest --- ################################
 ##############################################################################################
 # --- Load Data ---
-sim_name = string("network_4.h5")
+sim_name = string("network_permit_rest.h5")
 sim_savedpath = string("./networks_trained/")
 fid = h5open(joinpath(sim_savedpath, sim_name), "r")
 popmembers = read(fid["data"]["popmembers"])
@@ -998,9 +998,9 @@ ipopmembers = findI2populations(weights, popmembers, iipop_len=Ni_members)
 ########################################################
 ax_ee = Axis(g_rest[1, 2], #xlabel=L"\text{training time (%)}", ylabel=L"\text{mean synaptic strength (pF)}",
             xticks=([0, 125, 250, 375, 500], [L"0", L"25", L"50", L"75", L"100"]),
-            yticks=([5, 10, 15], [L"5", L"10", L"15"]),
-            xlabelsize=labelsize, ylabelsize=labelsize, xticklabelsize=ticklabelsize, yticklabelsize=ticklabelsize,
-            limits=(-2.5, 505.5, 1., 19.5))
+            # yticks=([5, 10, 15], [L"5", L"10", L"15"]),
+            xlabelsize=labelsize, ylabelsize=labelsize, xticklabelsize=ticklabelsize, yticklabelsize=ticklabelsize)#,
+            # limits=(-2.5, 505.5, 1., 19.5))
 
 for ipop = 1:Npop
     lines!(ax_ee, weightsEE[ipop, ipop, 500:end], linewidth=linewidth, color=ColorSchemes.Blues[7], label=L"\text{E-assembly}")
@@ -1012,9 +1012,9 @@ axislegend(ax_ee, position=(.9, .7), labelsize=labelsize, titlesize=textsize, me
 ########################################################
 ax_ei = Axis(g_rest[1, 3], #xlabel=L"\text{training time (%)}", ylabel=L"\text{mean synaptic strength (pF)}",
             xticks=([0, 125, 250, 375, 500], [L"0", L"25", L"50", L"75", L"100"]),
-            yticks=([1.5, 2.5, 3.5], [L"1.5", L"2.5", L"3.5"]),
-            xlabelsize=labelsize, ylabelsize=labelsize, xticklabelsize=ticklabelsize, yticklabelsize=ticklabelsize,
-            limits=(-2.5, 505.5, 1.1, 3.9))
+            # yticks=([1.5, 2.5, 3.5], [L"1.5", L"2.5", L"3.5"]),
+            xlabelsize=labelsize, ylabelsize=labelsize, xticklabelsize=ticklabelsize, yticklabelsize=ticklabelsize)#,
+            # limits=(-2.5, 505.5, 1.1, 3.9))
 for ipop = 1:Npop
     lines!(ax_ei, mean(weightsEI[ipopmembers[:, ipop] .- (Ncells-Ni2), ipop, 500:end], dims=1)[:], linewidth=linewidth, color=ColorSchemes.Blues[5], label=L"E\text{-to-}I_2")
 end
@@ -1025,9 +1025,9 @@ axislegend(ax_ei, position=(.1, .9), labelsize=labelsize, titlesize=textsize, me
 ########################################################
 ax_i1 = Axis(g_rest[2, 2], xlabel=L"\text{training time (%)}", #ylabel=L"\text{mean synaptic strength (pF)}",
             xticks=([0, 125, 250, 375, 500], [L"0", L"25", L"50", L"75", L"100"]),
-            yticks=([60, 80, 100], [L"60", L"80", L"100"]),
-            xlabelsize=labelsize, ylabelsize=labelsize, xticklabelsize=ticklabelsize, yticklabelsize=ticklabelsize,
-            limits=(-2.5, 505.5, 48.1, 115))
+            # yticks=([60, 80, 100], [L"60", L"80", L"100"]),
+            xlabelsize=labelsize, ylabelsize=labelsize, xticklabelsize=ticklabelsize, yticklabelsize=ticklabelsize)#,
+            # limits=(-2.5, 505.5, 48.1, 115))
 for ipop = 2:Npop
     (mod(ipop, seq_length) == 1) && (continue)
     lines!(ax_i1, mean(weightsIE[1:(Ncells-Ne-Ni2), ipop, 500:end], dims=1)[:], linewidth=linewidth, color=ColorSchemes.Reds[9], label=L"I_1\text{-to-}E")
@@ -1039,9 +1039,9 @@ axislegend(ax_i1, position=(.9, .3), labelsize=labelsize, titlesize=textsize, me
 ########################################################
 ax_i2 = Axis(g_rest[2, 3], xlabel=L"\text{training time (%)}", #ylabel=L"\text{mean synaptic strength (pF)}",
             xticks=([0, 125, 250, 375, 500], [L"0", L"25", L"50", L"75", L"100"]),
-            yticks=([30, 60, 90], [L"30", L"60", L"90"]),
-            xlabelsize=labelsize, ylabelsize=labelsize, xticklabelsize=ticklabelsize, yticklabelsize=ticklabelsize,
-            limits=(-2.5, 505.5, 15.1, 106.))
+            # yticks=([30, 60, 90], [L"30", L"60", L"90"]),
+            xlabelsize=labelsize, ylabelsize=labelsize, xticklabelsize=ticklabelsize, yticklabelsize=ticklabelsize)#),
+            # limits=(-2.5, 505.5, 15.1, 106.))
 for ipop = 1:Npop
     lines!(ax_i2, mean(weightsIE[ipopmembers[:, ipop] .- (Ne), ipop, 500:end], dims=1)[:], linewidth=linewidth, color=:gray70, label=L"I_2-\text{to}-E \text{ recurrent}")
 end
@@ -1062,8 +1062,6 @@ linkxaxes!(ax_ee, ax_i1); linkxaxes!(ax_ei, ax_i2)
 
 Label(g_rest[1:2, 1], L"\text{mean synaptic strength (pF)}",
     fontsize=labelsize, rotation=π/2)
-
-
 #
 
 Label(g_model[1, 0, TopLeft()], L"\textbf{a}",
@@ -1102,13 +1100,898 @@ colsize!(g_struct, 0, Relative(0))
 colsize!(g_learn, 0, Relative(0))
 colsize!(g_rest, 0, Relative(0))
 
+# colgap!(g_struct, 2, Relative(.1))
+colgap!(g_struct, 1, Relative(0))
+colgap!(g_struct, 3, Relative(0))
+colgap!(g_struct, 5, Relative(0))
+
 rowgap!(fig.layout, 1, Relative(.05))
 rowgap!(fig.layout, 2, Relative(.05))
 colgap!(fig.layout, 2, Relative(.05))
-colsize!(fig.layout, 2, Relative(.25))
-# colgap!(fig.layout, 9, Relative(.05))
+
+rowsize!(fig.layout, 1, Relative(.3))
+rowsize!(fig.layout, 2, Relative(.25))
 
 
 (!isdir(output_dir)) && (mkpath(output_dir))
 save(joinpath(output_dir, string("figure_2.png")), fig)
+end
+
+
+##############################################################################################
+######                               --- FIGURE 3 ---                                   ###### 
+##############################################################################################
+
+if makefig_3
+
+fig = Figure(size=(4800, 3800))
+
+g_i1_act = fig[1, 1] = GridLayout()
+g_i1_anal = fig[1, 2:3] = GridLayout()
+g_i2_act = fig[2, 1] = GridLayout()
+g_i2_anal = fig[2, 2:3] = GridLayout()
+g_ei_act = fig[3, 1] = GridLayout()
+g_ei_anal = fig[3, 2:3] = GridLayout()
+
+
+labelsize = 66
+ticklabelsize = 54
+legendlabelsize = 54
+# legendticklabelsize = 54
+# colorbarlabelsize = 66
+# colorbarticklabelsize = 54
+textsize = 66
+subplotlabelsize = 66
+
+dodge = 1
+dodge_gap = .1
+v_width = 1.
+b_width = 1.
+b_strokewidth = 1.
+
+linewidth = 6
+markersize = 5
+
+colorbarsize = 40
+
+##############################################################################################
+#############################  --- iSTDP₁ knockout activity --- ##############################
+##############################################################################################
+# --- Load Data ---
+mode = "spontaneous"
+sim_name = string("network_i1STDP-knockout_spontaneous_seed_", seed_num, ".h5")
+sim_savedpath = string("./networks_trained_", mode, "/network_i1STDP-knockout/")
+fid = h5open(joinpath(sim_savedpath, sim_name), "r")
+popmembers = read(fid["data"]["popmembers"])
+weights = read(fid["data"]["weights"])
+times = read(fid["data"]["times"])
+close(fid)
+
+# Parameters
+Ne = 3000
+Ni2 = 750
+seq_length = 3
+Ni_members = 25
+
+Ncells = size(times)[1]
+Npop = size(popmembers, 2)
+Nmaxmembers = size(popmembers, 1)
+interval = collect(12_500:17_500)
+
+restcells = deleteat!(map(*, ones(Int, Ne), range(1, stop=Ne)), sort(unique(popmembers))[2:end])
+ylim_max = count(i->(i>0), popmembers) + length(restcells) + (Ncells-Ni2-Ne) + length(ipopmembers)
+
+ns = zeros(Ncells)
+for cc = 1:Ncells
+    ns[cc] = count(i->i>0, times[cc, :])
+end
+
+# Plot params
+ytick_seq = zeros(round(Int, Npop/seq_length)*2)
+x_ticks = minimum(interval):1000:maximum(interval)
+rowcount = 1
+ytickcount = 1
+
+ipopmembers = findI2populations(weights, popmembers, iipop_len=Ni_members, Ni2=Ni2)
+restcells = deleteat!(map(*, ones(Int, Ne), range(1, stop=Ne)), sort(unique(popmembers))[2:end])
+ylim_max = count(i->(i>0), popmembers) + length(restcells) + (Ncells-Ni2-Ne) + length(ipopmembers)
+
+# rates = convolveSpikes(times, interval=interval, gaussian=false, sigma=10.)
+rates = binRates(times, interval=interval)
+emembers = unique(filter(i->i>0, popmembers))
+
+ns = zeros(Ncells)
+for cc = 1:Ncells
+    ns[cc] = count(i->i>0, times[cc, :])
+end
+
+ax = Axis(g_i1_act[2, 1], xlabel=L"\text{simulation time (s)}", ylabel=L"\text{sequences}", xlabelsize=labelsize, ylabelsize=labelsize,
+            xticks=(x_ticks, [L"%$(x)" for x in 1:length(x_ticks)]), xticklabelsize=ticklabelsize, xgridvisible=false,
+            yticklabelsize=ticklabelsize, ygridvisible=false,
+            limits=(minimum(interval), maximum(interval), 1, ylim_max))
+# Excitatoy assembly members
+for pp = 1:Npop
+    for cc = 1:Nmaxmembers
+        (popmembers[cc, pp] < 1) && (break)
+        indx = round(Int, popmembers[cc, pp])
+        x_vals = times[indx, 1:round(Int, ns[indx])]
+        y_vals = rowcount * ones(length(x_vals))
+        scatter!(ax, x_vals, y_vals, color=ColorSchemes.Blues[7], markersize=markersize)
+        rowcount += 1
+    end
+    if mod(pp, seq_length) == 0
+        hlines!(ax, rowcount, linewidth=linewidth*.8, color=ColorSchemes.Blues[7])
+    else
+        hlines!(ax, rowcount, linewidth=linewidth*.3, color=ColorSchemes.Blues[7])
+    end
+    if mod(pp, seq_length) == 0
+        ytick_seq[ytickcount] = rowcount - (Nmaxmembers*seq_length/2)
+        ytickcount += 1
+    end
+end
+hlines!(ax, rowcount, linewidth=linewidth*.5, color=:gray20)
+# Excitatory non-members 
+for cc in restcells
+    x_vals = times[cc, 1:round(Int, ns[cc])]
+    y_vals = rowcount * ones(length(x_vals))
+    scatter!(ax, x_vals, y_vals, color=ColorSchemes.Greys[7], markersize=markersize)
+    rowcount += 1
+end
+hlines!(ax, rowcount, linewidth=linewidth*.5, color=:gray20)
+# Inhibitory I₁
+for cc = (Ne+1):(Ncells-Ni2+1)
+    x_vals = times[cc, 1:round(Int, ns[cc])]
+    y_vals = rowcount * ones(length(x_vals))
+    scatter!(ax, x_vals, y_vals, color=ColorSchemes.Reds[9], markersize=markersize)
+    rowcount += 1
+end
+hlines!(ax, rowcount, linewidth=linewidth*.5, color=:gray20)
+# I₂ assembly members
+for pp = 1:Npop
+    for cc = 1:Ni_members
+        indx = round(Int, popmembers[cc, pp])
+        x_vals = times[indx, 1:round(Int, ns[indx])]
+        y_vals = rowcount * ones(length(x_vals))
+        scatter!(ax, x_vals, y_vals, color=ColorSchemes.Reds[6], markersize=markersize)
+        rowcount += 1
+    end
+    if mod(pp, seq_length) == 0
+        hlines!(ax, rowcount, linewidth=linewidth*.3, color=ColorSchemes.Reds[9])
+    end
+    if mod(pp, seq_length) == 0
+        ytick_seq[ytickcount] = rowcount - (Ni_members*seq_length/2)
+        ytickcount += 1
+    end
+end
+
+ytick_labels = [Char(i+64) for i in 1:(round(Int, Npop/seq_length))]
+ytick_labels = vcat(ytick_labels, ytick_labels)
+ax.yticks = (ytick_seq, [L"\text{%$(x)}" for x in ytick_labels])
+
+
+ax_top = Axis(g_i1_act[1, 1], xlabel="", ylabel="", xlabelsize=labelsize, ylabelsize=labelsize,
+                # title=L"\textbf{after stimulation}",  titlesize=labelsize,
+                xticks=([], []), xticklabelsize=ticklabelsize,
+                yticks=([0, 1, 2], [L"0", L"1", L"2"]), yticklabelsize=ticklabelsize, yaxisposition=:right,
+                limits=(minimum(interval), maximum(interval), -0.2, 10.1))
+# Plot mean firing rates
+lines!(ax_top, interval, vec(mean(rates[emembers, :], dims=1)), color=ColorSchemes.Blues[7], linewidth=linewidth)
+lines!(ax_top, interval, vec(mean(rates[restcells, :], dims=1)), color=ColorSchemes.Greys[7], linewidth=linewidth)
+lines!(ax_top, interval, vec(mean(rates[(Ne+1):(Ncells-Ni2), :], dims=1)), color=ColorSchemes.Reds[9], linewidth=linewidth)
+lines!(ax_top, interval, vec(mean(rates[(Ncells-Ni2+1):Ncells, :], dims=1)), color=ColorSchemes.Reds[6], linewidth=linewidth)
+
+linkxaxes!(ax, ax_top); #xlims!(ax, low=minimum(interval)+500, high=maximum(interval))
+hidedecorations!(ax, grid=true, ticks=false, ticklabels=false, label=false)
+hideydecorations!(ax, grid=true, ticks=true, ticklabels=false, label=false)
+hideydecorations!(ax_top, grid=true, ticks=true, ticklabels=true, label=true)
+rowsize!(g_i1_act, 1, Relative(1/5))    
+
+
+##############################################################################################
+#############################  --- iSTDP₁ knockout analysis --- ##############################
+##############################################################################################
+
+# --- Load Data ---
+sim_name = string("network_i1STDP-knockout.h5")
+sim_savedpath = string("./networks_trained/")
+fid = h5open(joinpath(sim_savedpath, sim_name), "r")
+popmembers = read(fid["data"]["popmembers"])
+weights = read(fid["data"]["weights"])
+times = read(fid["data"]["times"])
+weightsEE_tr = read(fid["data"]["weightsEE"])
+weightsEI_tr = read(fid["data"]["weightsEI"])
+weightsIE_tr = read(fid["data"]["weightsIE"])
+close(fid)
+
+
+weightsEE = sum(weights[popmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :] ./ count(i->i>0, weights[popmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :]
+weightsEI = sum(weights[popmembers[:, :], ipopmembers[:, :]], dims=(1, 3))[1, :, 1, :] ./ count(i->i>0, weights[popmembers[:, :], ipopmembers[:, :]], dims=(1, 3))[1, :, 1, :]
+weightsIE = sum(weights[ipopmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :] ./ count(i->i>0, weights[ipopmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :]
+
+
+########################################################
+################ --- E-to-E weights --- ################
+########################################################
+
+cl1 = ColorScheme(range(colorant"gray5", colorant"gray80", length=100))
+cl_exc = ColorScheme(range(colorant"gray80", colorant"dodgerblue4", length=100))
+excitation_cs = vcat(get(cl1, LinRange(0, 1, 100)), get(cl_exc, LinRange(0, 1, 100)))
+
+Npop = size(weightsEE)[1]
+line_positions = collect(seq_length+.5:seq_length:Npop+.5)
+
+ax = Axis(g_i1_anal[1:3, 1:2], xlabel=L"\text{pre }E\text{-assembly}", ylabel=L"\text{post }E\text{-assembly}", xlabelsize=labelsize, ylabelsize=labelsize,
+            xticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), xticklabelsize=ticklabelsize, xgridvisible=false,
+            yticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), yticklabelsize=ticklabelsize, ygridvisible=false,
+            aspect=1)
+ht = heatmap!(ax, weightsEE, colormap=excitation_cs)
+hlines!(ax, line_positions, linewidth=linewidth, color=:firebrick, linestyle=:dot)
+vlines!(ax, line_positions, linewidth=linewidth, color=:firebrick, linestyle=:dot)
+
+for (ind, ln) in enumerate(line_positions)
+    vlines!(ax, ln, ymin=(ind-1)*seq_length/Npop, ymax=(ind+1)*seq_length/Npop, linewidth=linewidth, color=:firebrick)
+    hlines!(ax, ln, xmin=(ind-1)*seq_length/Npop, xmax=(ind+1)*seq_length/Npop, linewidth=linewidth, color=:firebrick)
+end
+
+Colorbar(g_i1_anal[1:3, 3], ht, size=colorbarsize, label=L"\text{mean syn. str. (pF)}", height=Relative(.6), labelsize=labelsize, ticklabelsize=ticklabelsize)
+
+########################################################
+################ --- I₂-to-E weights --- ###############
+########################################################
+
+cl1 = ColorScheme(range(colorant"gray5", colorant"gray80", length=100))
+cl_inh = ColorScheme(range(colorant"gray80", colorant"firebrick", length=100))
+inhibition_cs = vcat(get(cl1, LinRange(0, 1, 100)), get(cl_inh, LinRange(0, 1, 100)))
+    
+ax = Axis(g_i1_anal[4:6, 1:2], xlabel=L"\text{pre }I_2 \text{-assembly}", ylabel=L"\text{post }E \text{-assembly}", xlabelsize=labelsize, ylabelsize=labelsize,
+            xticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), xticklabelsize=ticklabelsize, xgridvisible=false,
+            yticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), yticklabelsize=ticklabelsize, ygridvisible=false,
+            aspect=1)
+ht = heatmap!(ax, weightsIE, colormap=inhibition_cs)
+hlines!(line_positions, linewidth=linewidth, color=:dodgerblue4, linestyle=:dot)
+vlines!(line_positions, linewidth=linewidth, color=:dodgerblue4, linestyle=:dot)
+
+for (ind, ln) in enumerate(line_positions)
+    vlines!(ln, ymin=(ind-1)*seq_length/Npop, ymax=(ind+1)*seq_length/Npop, linewidth=linewidth, color=:dodgerblue4)
+    hlines!(ln, xmin=(ind-1)*seq_length/Npop, xmax=(ind+1)*seq_length/Npop, linewidth=linewidth, color=:dodgerblue4)
+end
+
+Colorbar(g_i1_anal[4:6, 3], ht, size=colorbarsize, label=L"\text{mean syn. str. (pF)}", height=Relative(.6), labelsize=labelsize, ticklabelsize=ticklabelsize)
+
+########################################################
+################ --- I₂-to-E weights --- ###############
+########################################################
+
+cl1 = ColorScheme(range(colorant"gray5", colorant"gray80", length=100))
+cl_inh = ColorScheme(range(colorant"gray80", colorant"dodgerblue2", length=100))
+inhibition_cs = vcat(get(cl1, LinRange(0, 1, 100)), get(cl_inh, LinRange(0, 1, 100)))
+
+ax = Axis(g_i1_anal[7:9, 1:2], xlabel=L"\text{pre }E \text{-assembly}", ylabel=L"\text{post }I_2 \text{-assembly}", xlabelsize=labelsize, ylabelsize=labelsize,
+            xticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), xticklabelsize=ticklabelsize, xgridvisible=false,
+            yticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), yticklabelsize=ticklabelsize, ygridvisible=false,
+            aspect=1)
+ht = heatmap!(ax, weightsEI, colormap=inhibition_cs)
+hlines!(line_positions, linewidth=linewidth, color=:firebrick, linestyle=:dot)
+vlines!(line_positions, linewidth=linewidth, color=:firebrick, linestyle=:dot)
+
+for (ind, ln) in enumerate(line_positions)
+    vlines!(ln, ymin=(ind-1)*seq_length/Npop, ymax=(ind+1)*seq_length/Npop, linewidth=linewidth, color=:firebrick)
+    hlines!(ln, xmin=(ind-1)*seq_length/Npop, xmax=(ind+1)*seq_length/Npop, linewidth=linewidth, color=:firebrick)
+end
+
+Colorbar(g_i1_anal[7:9, 3], ht, size=colorbarsize, label=L"\text{mean syn. str. (pF)}", height=Relative(.6), labelsize=labelsize, ticklabelsize=ticklabelsize)
+
+########################################################
+################ --- Extra plot here --- ###############
+########################################################
+
+########################################################
+################ --- E-to-E weights --- ################
+########################################################
+ax_ee = Axis(g_i1_anal[1:3, 4:5], #xlabel=L"\text{training time (%)}", ylabel=L"\text{mean synaptic strength (pF)}",
+            # xticks=([0, 125, 250, 375, 500], [L"0", L"25", L"50", L"75", L"100"]),
+            yticks=([5, 10, 15], [L"5", L"10", L"15"]),
+            xlabelsize=labelsize, ylabelsize=labelsize, xticklabelsize=ticklabelsize, yticklabelsize=ticklabelsize)#,
+            # limits=(-2.5, 505.5, 1., 19.5))
+for ipop = 1:Npop
+    lines!(ax_ee, weightsEE_tr[ipop, ipop, 1:500], linewidth=linewidth, color=ColorSchemes.Blues[7], label=L"\text{E-assembly}")
+end
+# axislegend(ax_ee, position=(.9, .7), labelsize=labelsize, titlesize=textsize, merge=true)
+
+########################################################
+################ --- E-to-I₂ weights --- ###############
+########################################################
+ax_ei = Axis(g_i1_anal[4:6, 4:5], #xlabel=L"\text{training time (%)}", 
+            ylabel=L"\text{mean synaptic strength (pF)}",
+            # xticks=([0, 125, 250, 375, 500], [L"0", L"25", L"50", L"75", L"100"]),
+            yticks=([1.5, 2.5, 3.5], [L"1.5", L"2.5", L"3.5"]),
+            xlabelsize=labelsize, ylabelsize=labelsize, xticklabelsize=ticklabelsize, yticklabelsize=ticklabelsize)#,
+            # limits=(-2.5, 505.5, 1.1, 3.9))
+for ipop = 1:Npop
+    lines!(ax_ei, mean(weightsEI_tr[ipopmembers[:, ipop] .- (Ncells-Ni2), ipop, 1:500], dims=1)[:], linewidth=linewidth, color=ColorSchemes.Blues[5], label=L"E\text{-to-}I_2")
+end
+# axislegend(ax_ei, position=(.1, .9), labelsize=labelsize, titlesize=textsize, merge=true)
+
+########################################################
+################ --- I₂-to-E weights --- ###############
+########################################################
+ax_i2 = Axis(g_i1_anal[7:9, 4:5], xlabel=L"\text{training time (%)}", #ylabel=L"\text{mean synaptic strength (pF)}",
+            xticks=([0, 125, 250, 375, 500], [L"0", L"25", L"50", L"75", L"100"]),
+            yticks=([30, 60, 90], [L"30", L"60", L"90"]),
+            xlabelsize=labelsize, ylabelsize=labelsize, xticklabelsize=ticklabelsize, yticklabelsize=ticklabelsize)#,
+            # limits=(-2.5, 505.5, 15.1, 106.))
+for ipop = 1:Npop
+    lines!(ax_i2, mean(weightsIE_tr[ipopmembers[:, ipop] .- (Ne), ipop, 1:500], dims=1)[:], linewidth=linewidth, color=:gray70, label=L"I_2-\text{to}-E \text{ recurrent}")
+end
+
+for ipop = 2:Npop
+    (mod(ipop, seq_length) == 1) && (continue)
+    lines!(ax_i2, mean(weightsIE_tr[ipopmembers[:, ipop] .- (Ne), ipop-1, 1:500], dims=1)[:], linewidth=linewidth, color=:black, label=L"I_2\text{-to-}E \text{ preceding}")
+end
+
+for ipop = 2:Npop
+    (mod(ipop, seq_length) == 1) && (continue)
+    lines!(ax_i2, mean(weightsIE_tr[ipopmembers[:, ipop-1] .- (Ne), ipop, 1:500], dims=1)[:], linewidth=linewidth, color=ColorSchemes.Reds[6], label=L"I_2\text{-to-}E \text{ succeeding}")
+end
+# axislegend(ax_i2, position=(.1, .9), labelsize=labelsize, titlesize=textsize, merge=true)
+
+linkxaxes!(ax_ee, ax_ei, ax_i2)#; linkxaxes!(ax_ei, ax_i2); linkxaxes!(ax_ee, ax_i2)
+hidexdecorations!(ax_ee, grid=false, ticks=true, ticklabels=true, label=true)
+hidexdecorations!(ax_ei, grid=false, ticks=true, ticklabels=true, label=true)
+
+# Label(g_i1_anal[4:5, 4], L"\text{mean synaptic strength (pF)}",
+#     fontsize=labelsize, rotation=π/2)
+#
+
+
+##############################################################################################
+#############################  --- iSTDP₂ knockout activity --- ##############################
+##############################################################################################
+# --- Load Data ---
+mode = "spontaneous"
+sim_name = string("network_i2STDP-knockout_spontaneous_seed_", seed_num, ".h5")
+sim_savedpath = string("./networks_trained_", mode, "/network_i2STDP-knockout/")
+fid = h5open(joinpath(sim_savedpath, sim_name), "r")
+popmembers = read(fid["data"]["popmembers"])
+weights = read(fid["data"]["weights"])
+times = read(fid["data"]["times"])
+close(fid)
+
+# Parameters
+Ne = 3000
+Ni2 = 250
+seq_length = 3
+Ni_members = 25
+
+Ncells = size(times)[1]
+Npop = size(popmembers, 2)
+Nmaxmembers = size(popmembers, 1)
+interval = collect(12_500:17_500)
+
+restcells = deleteat!(map(*, ones(Int, Ne), range(1, stop=Ne)), sort(unique(popmembers))[2:end])
+ylim_max = count(i->(i>0), popmembers) + length(restcells) + (Ncells-Ni2-Ne) + length(ipopmembers)
+
+ns = zeros(Ncells)
+for cc = 1:Ncells
+    ns[cc] = count(i->i>0, times[cc, :])
+end
+
+# Plot params
+ytick_seq = zeros(round(Int, Npop/seq_length)*2)
+x_ticks = minimum(interval):1000:maximum(interval)
+rowcount = 1
+ytickcount = 1
+
+ipopmembers = findI2populations(weights, popmembers, iipop_len=Ni_members, Ni2=Ni2)
+restcells = deleteat!(map(*, ones(Int, Ne), range(1, stop=Ne)), sort(unique(popmembers))[2:end])
+ylim_max = count(i->(i>0), popmembers) + length(restcells) + (Ncells-Ni2-Ne) + length(ipopmembers)
+
+# rates = convolveSpikes(times, interval=interval, gaussian=false, sigma=10.)
+rates = binRates(times, interval=interval)
+emembers = unique(filter(i->i>0, popmembers))
+
+ns = zeros(Ncells)
+for cc = 1:Ncells
+    ns[cc] = count(i->i>0, times[cc, :])
+end
+
+ax = Axis(g_i2_act[2, 1], xlabel=L"\text{simulation time (s)}", ylabel=L"\text{sequences}", xlabelsize=labelsize, ylabelsize=labelsize,
+            xticks=(x_ticks, [L"%$(x)" for x in 1:length(x_ticks)]), xticklabelsize=ticklabelsize, xgridvisible=false,
+            yticklabelsize=ticklabelsize, ygridvisible=false,
+            limits=(minimum(interval), maximum(interval), 1, ylim_max))
+# Excitatoy assembly members
+for pp = 1:Npop
+    for cc = 1:Nmaxmembers
+        (popmembers[cc, pp] < 1) && (break)
+        indx = round(Int, popmembers[cc, pp])
+        x_vals = times[indx, 1:round(Int, ns[indx])]
+        y_vals = rowcount * ones(length(x_vals))
+        scatter!(ax, x_vals, y_vals, color=ColorSchemes.Blues[7], markersize=markersize)
+        rowcount += 1
+    end
+    if mod(pp, seq_length) == 0
+        hlines!(ax, rowcount, linewidth=linewidth*.8, color=ColorSchemes.Blues[7])
+    else
+        hlines!(ax, rowcount, linewidth=linewidth*.3, color=ColorSchemes.Blues[7])
+    end
+    if mod(pp, seq_length) == 0
+        ytick_seq[ytickcount] = rowcount - (Nmaxmembers*seq_length/2)
+        ytickcount += 1
+    end
+end
+hlines!(ax, rowcount, linewidth=linewidth*.5, color=:gray20)
+# Excitatory non-members 
+for cc in restcells
+    x_vals = times[cc, 1:round(Int, ns[cc])]
+    y_vals = rowcount * ones(length(x_vals))
+    scatter!(ax, x_vals, y_vals, color=ColorSchemes.Greys[7], markersize=markersize)
+    rowcount += 1
+end
+hlines!(ax, rowcount, linewidth=linewidth*.5, color=:gray20)
+# Inhibitory I₁
+for cc = (Ne+1):(Ncells-Ni2+1)
+    x_vals = times[cc, 1:round(Int, ns[cc])]
+    y_vals = rowcount * ones(length(x_vals))
+    scatter!(ax, x_vals, y_vals, color=ColorSchemes.Reds[9], markersize=markersize)
+    rowcount += 1
+end
+hlines!(ax, rowcount, linewidth=linewidth*.5, color=:gray20)
+# I₂ assembly members
+for pp = 1:Npop
+    for cc = 1:Ni_members
+        indx = round(Int, popmembers[cc, pp])
+        x_vals = times[indx, 1:round(Int, ns[indx])]
+        y_vals = rowcount * ones(length(x_vals))
+        scatter!(ax, x_vals, y_vals, color=ColorSchemes.Reds[6], markersize=markersize)
+        rowcount += 1
+    end
+    if mod(pp, seq_length) == 0
+        hlines!(ax, rowcount, linewidth=linewidth*.3, color=ColorSchemes.Reds[9])
+    end
+    if mod(pp, seq_length) == 0
+        ytick_seq[ytickcount] = rowcount - (Ni_members*seq_length/2)
+        ytickcount += 1
+    end
+end
+
+ytick_labels = [Char(i+64) for i in 1:(round(Int, Npop/seq_length))]
+ytick_labels = vcat(ytick_labels, ytick_labels)
+ax.yticks = (ytick_seq, [L"\text{%$(x)}" for x in ytick_labels])
+
+
+ax_top = Axis(g_i2_act[1, 1], xlabel="", ylabel="", xlabelsize=labelsize, ylabelsize=labelsize,
+                # title=L"\textbf{after stimulation}",  titlesize=labelsize,
+                xticks=([], []), xticklabelsize=ticklabelsize,
+                yticks=([0, 1, 2], [L"0", L"1", L"2"]), yticklabelsize=ticklabelsize, yaxisposition=:right,
+                limits=(minimum(interval), maximum(interval), -0.2, 10.1))
+# Plot mean firing rates
+lines!(ax_top, interval, vec(mean(rates[emembers, :], dims=1)), color=ColorSchemes.Blues[7], linewidth=linewidth)
+lines!(ax_top, interval, vec(mean(rates[restcells, :], dims=1)), color=ColorSchemes.Greys[7], linewidth=linewidth)
+lines!(ax_top, interval, vec(mean(rates[(Ne+1):(Ncells-Ni2), :], dims=1)), color=ColorSchemes.Reds[9], linewidth=linewidth)
+lines!(ax_top, interval, vec(mean(rates[(Ncells-Ni2+1):Ncells, :], dims=1)), color=ColorSchemes.Reds[6], linewidth=linewidth)
+
+linkxaxes!(ax, ax_top); #xlims!(ax, low=minimum(interval)+500, high=maximum(interval))
+hidedecorations!(ax, grid=true, ticks=false, ticklabels=false, label=false)
+hideydecorations!(ax, grid=true, ticks=true, ticklabels=false, label=false)
+hideydecorations!(ax_top, grid=true, ticks=true, ticklabels=true, label=true)
+rowsize!(g_i2_act, 1, Relative(1/5))    
+
+
+##############################################################################################
+#############################  --- iSTDP₂ knockout analysis --- ##############################
+##############################################################################################
+# --- Load Data ---
+sim_name = string("network_i2STDP-knockout.h5")
+sim_savedpath = string("./networks_trained/")
+fid = h5open(joinpath(sim_savedpath, sim_name), "r")
+popmembers = read(fid["data"]["popmembers"])
+weights = read(fid["data"]["weights"])
+times = read(fid["data"]["times"])
+weightsEE_tr = read(fid["data"]["weightsEE"])
+weightsEI_tr = read(fid["data"]["weightsEI"])
+weightsIE_tr = read(fid["data"]["weightsIE"])
+close(fid)
+
+weightsEE = sum(weights[popmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :] ./ count(i->i>0, weights[popmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :]
+weightsEI = sum(weights[popmembers[:, :], ipopmembers[:, :]], dims=(1, 3))[1, :, 1, :] ./ count(i->i>0, weights[popmembers[:, :], ipopmembers[:, :]], dims=(1, 3))[1, :, 1, :]
+weightsIE = sum(weights[ipopmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :] ./ count(i->i>0, weights[ipopmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :]
+
+
+########################################################
+################ --- E-to-E weights --- ################
+########################################################
+
+cl1 = ColorScheme(range(colorant"gray5", colorant"gray80", length=100))
+cl_exc = ColorScheme(range(colorant"gray80", colorant"dodgerblue4", length=100))
+excitation_cs = vcat(get(cl1, LinRange(0, 1, 100)), get(cl_exc, LinRange(0, 1, 100)))
+
+Npop = size(weightsEE)[1]
+line_positions = collect(seq_length+.5:seq_length:Npop+.5)
+
+ax = Axis(g_i2_anal[1:3, 1:2], xlabel=L"\text{pre }E\text{-assembly}", ylabel=L"\text{post }E\text{-assembly}", xlabelsize=labelsize, ylabelsize=labelsize,
+            xticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), xticklabelsize=ticklabelsize, xgridvisible=false,
+            yticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), yticklabelsize=ticklabelsize, ygridvisible=false,
+            aspect=1)
+ht = heatmap!(ax, weightsEE, colormap=excitation_cs)
+hlines!(ax, line_positions, linewidth=linewidth, color=:firebrick, linestyle=:dot)
+vlines!(ax, line_positions, linewidth=linewidth, color=:firebrick, linestyle=:dot)
+
+for (ind, ln) in enumerate(line_positions)
+    vlines!(ax, ln, ymin=(ind-1)*seq_length/Npop, ymax=(ind+1)*seq_length/Npop, linewidth=linewidth, color=:firebrick)
+    hlines!(ax, ln, xmin=(ind-1)*seq_length/Npop, xmax=(ind+1)*seq_length/Npop, linewidth=linewidth, color=:firebrick)
+end
+
+Colorbar(g_i2_anal[1:3, 3], ht, size=colorbarsize, label=L"\text{mean syn. str. (pF)}", height=Relative(.6), labelsize=labelsize, ticklabelsize=ticklabelsize)
+
+########################################################
+################ --- I₂-to-E weights --- ###############
+########################################################
+
+cl1 = ColorScheme(range(colorant"gray5", colorant"gray80", length=100))
+cl_inh = ColorScheme(range(colorant"gray80", colorant"dodgerblue2", length=100))
+inhibition_cs = vcat(get(cl1, LinRange(0, 1, 100)), get(cl_inh, LinRange(0, 1, 100)))
+
+ax = Axis(g_i2_anal[4:6, 1:2], xlabel=L"\text{pre }E \text{-assembly}", ylabel=L"\text{post }I_2 \text{-assembly}", xlabelsize=labelsize, ylabelsize=labelsize,
+            xticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), xticklabelsize=ticklabelsize, xgridvisible=false,
+            yticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), yticklabelsize=ticklabelsize, ygridvisible=false,
+            aspect=1)
+ht = heatmap!(ax, weightsEI, colormap=inhibition_cs)
+hlines!(line_positions, linewidth=linewidth, color=:firebrick, linestyle=:dot)
+vlines!(line_positions, linewidth=linewidth, color=:firebrick, linestyle=:dot)
+
+for (ind, ln) in enumerate(line_positions)
+    vlines!(ln, ymin=(ind-1)*seq_length/Npop, ymax=(ind+1)*seq_length/Npop, linewidth=linewidth, color=:firebrick)
+    hlines!(ln, xmin=(ind-1)*seq_length/Npop, xmax=(ind+1)*seq_length/Npop, linewidth=linewidth, color=:firebrick)
+end
+
+Colorbar(g_i2_anal[4:6, 3], ht, size=colorbarsize, label=L"\text{mean syn. str. (pF)}", height=Relative(.6), labelsize=labelsize, ticklabelsize=ticklabelsize)
+
+########################################################
+################ --- Extra plot here --- ###############
+########################################################
+
+
+########################################################
+################ --- E-to-E weights --- ################
+########################################################
+ax_ee = Axis(g_i2_anal[1:2, 4:5], #xlabel=L"\text{training time (%)}", ylabel=L"\text{mean synaptic strength (pF)}",
+            # xticks=([0, 125, 250, 375, 500], [L"0", L"25", L"50", L"75", L"100"]),
+            yticks=([5, 10, 15], [L"5", L"10", L"15"]),
+            xlabelsize=labelsize, ylabelsize=labelsize, xticklabelsize=ticklabelsize, yticklabelsize=ticklabelsize)#,
+            # limits=(-2.5, 505.5, 1., 19.5))
+for ipop = 1:Npop
+    lines!(ax_ee, weightsEE_tr[ipop, ipop, 1:500], linewidth=linewidth, color=ColorSchemes.Blues[7], label=L"\text{E-assembly}")
+end
+# axislegend(ax_ee, position=(.9, .7), labelsize=labelsize, titlesize=textsize, merge=true)
+
+########################################################
+################ --- E-to-I₂ weights --- ###############
+########################################################
+ax_ei = Axis(g_i2_anal[3:4, 4:5], #xlabel=L"\text{training time (%)}", ylabel=L"\text{mean synaptic strength (pF)}",
+            # xticks=([0, 125, 250, 375, 500], [L"0", L"25", L"50", L"75", L"100"]),
+            yticks=([1.5, 2.5, 3.5], [L"1.5", L"2.5", L"3.5"]),
+            xlabelsize=labelsize, ylabelsize=labelsize, xticklabelsize=ticklabelsize, yticklabelsize=ticklabelsize)#,
+            # limits=(-2.5, 505.5, 1.1, 3.9))
+for ipop = 1:Npop
+    lines!(ax_ei, mean(weightsEI_tr[ipopmembers[:, ipop] .- (Ncells-Ni2), ipop, 1:500], dims=1)[:], linewidth=linewidth, color=ColorSchemes.Blues[5], label=L"E\text{-to-}I_2")
+end
+# axislegend(ax_ei, position=(.1, .9), labelsize=labelsize, titlesize=textsize, merge=true)
+
+########################################################
+################ --- I₁-to-E weights --- ###############
+########################################################
+ax_i1 = Axis(g_i2_anal[5:6, 4:5], xlabel=L"\text{training time (%)}", #ylabel=L"\text{mean synaptic strength (pF)}",
+            xticks=([0, 125, 250, 375, 500], [L"0", L"25", L"50", L"75", L"100"]),
+            yticks=([60, 80, 100], [L"60", L"80", L"100"]),
+            xlabelsize=labelsize, ylabelsize=labelsize, xticklabelsize=ticklabelsize, yticklabelsize=ticklabelsize)#,
+            # limits=(-2.5, 505.5, 48.1, 115))
+for ipop = 2:Npop
+    (mod(ipop, seq_length) == 1) && (continue)
+    lines!(ax_i1, mean(weightsIE_tr[1:(Ncells-Ne-Ni2), ipop, 1:500], dims=1)[:], linewidth=linewidth, color=ColorSchemes.Reds[9], label=L"I_1\text{-to-}E")
+end
+# axislegend(ax_i1, position=(.9, .3), labelsize=labelsize, titlesize=textsize, merge=true)
+
+linkxaxes!(ax_ee, ax_i1, ax_ei)#; linkxaxes!(ax_ee, ax_ei)
+hidexdecorations!(ax_ee, grid=false, ticks=true, ticklabels=true, label=true)
+hidexdecorations!(ax_ei, grid=false, ticks=true, ticklabels=true, label=true)
+
+# Label(g_i1_anal[4:5, 4], L"\text{mean synaptic strength (pF)}",
+#     fontsize=labelsize, rotation=π/2)
+#
+
+
+##############################################################################################
+#############################  --- eiSTDP knockout activity --- ##############################
+##############################################################################################
+# --- Load Data ---
+mode = "spontaneous"
+sim_name = string("network_eiSTDP-knockout_spontaneous_seed_", seed_num, ".h5")
+sim_savedpath = string("./networks_trained_", mode, "/network_eiSTDP-knockout/")
+fid = h5open(joinpath(sim_savedpath, sim_name), "r")
+popmembers = read(fid["data"]["popmembers"])
+weights = read(fid["data"]["weights"])
+times = read(fid["data"]["times"])
+close(fid)
+
+# Parameters
+Ne = 3000
+Ni2 = 250
+seq_length = 3
+Ni_members = 25
+
+Ncells = size(times)[1]
+Npop = size(popmembers, 2)
+Nmaxmembers = size(popmembers, 1)
+interval = collect(12_500:17_500)
+
+restcells = deleteat!(map(*, ones(Int, Ne), range(1, stop=Ne)), sort(unique(popmembers))[2:end])
+ylim_max = count(i->(i>0), popmembers) + length(restcells) + (Ncells-Ni2-Ne) + length(ipopmembers)
+
+ns = zeros(Ncells)
+for cc = 1:Ncells
+    ns[cc] = count(i->i>0, times[cc, :])
+end
+
+# Plot params
+ytick_seq = zeros(round(Int, Npop/seq_length)*2)
+x_ticks = minimum(interval):1000:maximum(interval)
+rowcount = 1
+ytickcount = 1
+
+ipopmembers = findI2populations(weights, popmembers, iipop_len=Ni_members, Ni2=Ni2)
+restcells = deleteat!(map(*, ones(Int, Ne), range(1, stop=Ne)), sort(unique(popmembers))[2:end])
+ylim_max = count(i->(i>0), popmembers) + length(restcells) + (Ncells-Ni2-Ne) + length(ipopmembers)
+
+# rates = convolveSpikes(times, interval=interval, gaussian=false, sigma=10.)
+rates = binRates(times, interval=interval)
+emembers = unique(filter(i->i>0, popmembers))
+
+ns = zeros(Ncells)
+for cc = 1:Ncells
+    ns[cc] = count(i->i>0, times[cc, :])
+end
+
+ax = Axis(g_ei_act[2, 1], xlabel=L"\text{simulation time (s)}", ylabel=L"\text{sequences}", xlabelsize=labelsize, ylabelsize=labelsize,
+            xticks=(x_ticks, [L"%$(x)" for x in 1:length(x_ticks)]), xticklabelsize=ticklabelsize, xgridvisible=false,
+            yticklabelsize=ticklabelsize, ygridvisible=false,
+            limits=(minimum(interval), maximum(interval), 1, ylim_max))
+# Excitatoy assembly members
+for pp = 1:Npop
+    for cc = 1:Nmaxmembers
+        (popmembers[cc, pp] < 1) && (break)
+        indx = round(Int, popmembers[cc, pp])
+        x_vals = times[indx, 1:round(Int, ns[indx])]
+        y_vals = rowcount * ones(length(x_vals))
+        scatter!(ax, x_vals, y_vals, color=ColorSchemes.Blues[7], markersize=markersize)
+        rowcount += 1
+    end
+    if mod(pp, seq_length) == 0
+        hlines!(ax, rowcount, linewidth=linewidth*.8, color=ColorSchemes.Blues[7])
+    else
+        hlines!(ax, rowcount, linewidth=linewidth*.3, color=ColorSchemes.Blues[7])
+    end
+    if mod(pp, seq_length) == 0
+        ytick_seq[ytickcount] = rowcount - (Nmaxmembers*seq_length/2)
+        ytickcount += 1
+    end
+end
+hlines!(ax, rowcount, linewidth=linewidth*.5, color=:gray20)
+# Excitatory non-members 
+for cc in restcells
+    x_vals = times[cc, 1:round(Int, ns[cc])]
+    y_vals = rowcount * ones(length(x_vals))
+    scatter!(ax, x_vals, y_vals, color=ColorSchemes.Greys[7], markersize=markersize)
+    rowcount += 1
+end
+hlines!(ax, rowcount, linewidth=linewidth*.5, color=:gray20)
+# Inhibitory I₁
+for cc = (Ne+1):(Ncells-Ni2+1)
+    x_vals = times[cc, 1:round(Int, ns[cc])]
+    y_vals = rowcount * ones(length(x_vals))
+    scatter!(ax, x_vals, y_vals, color=ColorSchemes.Reds[9], markersize=markersize)
+    rowcount += 1
+end
+hlines!(ax, rowcount, linewidth=linewidth*.5, color=:gray20)
+# I₂ assembly members
+for pp = 1:Npop
+    for cc = 1:Ni_members
+        indx = round(Int, popmembers[cc, pp])
+        x_vals = times[indx, 1:round(Int, ns[indx])]
+        y_vals = rowcount * ones(length(x_vals))
+        scatter!(ax, x_vals, y_vals, color=ColorSchemes.Reds[6], markersize=markersize)
+        rowcount += 1
+    end
+    if mod(pp, seq_length) == 0
+        hlines!(ax, rowcount, linewidth=linewidth*.3, color=ColorSchemes.Reds[9])
+    end
+    if mod(pp, seq_length) == 0
+        ytick_seq[ytickcount] = rowcount - (Ni_members*seq_length/2)
+        ytickcount += 1
+    end
+end
+
+ytick_labels = [Char(i+64) for i in 1:(round(Int, Npop/seq_length))]
+ytick_labels = vcat(ytick_labels, ytick_labels)
+ax.yticks = (ytick_seq, [L"\text{%$(x)}" for x in ytick_labels])
+
+
+ax_top = Axis(g_ei_act[1, 1], xlabel="", ylabel="", xlabelsize=labelsize, ylabelsize=labelsize,
+                # title=L"\textbf{after stimulation}",  titlesize=labelsize,
+                xticks=([], []), xticklabelsize=ticklabelsize,
+                yticks=([0, 1, 2], [L"0", L"1", L"2"]), yticklabelsize=ticklabelsize, yaxisposition=:right,
+                limits=(minimum(interval), maximum(interval), -0.2, 10.1))
+# Plot mean firing rates
+lines!(ax_top, interval, vec(mean(rates[emembers, :], dims=1)), color=ColorSchemes.Blues[7], linewidth=linewidth)
+lines!(ax_top, interval, vec(mean(rates[restcells, :], dims=1)), color=ColorSchemes.Greys[7], linewidth=linewidth)
+lines!(ax_top, interval, vec(mean(rates[(Ne+1):(Ncells-Ni2), :], dims=1)), color=ColorSchemes.Reds[9], linewidth=linewidth)
+lines!(ax_top, interval, vec(mean(rates[(Ncells-Ni2+1):Ncells, :], dims=1)), color=ColorSchemes.Reds[6], linewidth=linewidth)
+
+linkxaxes!(ax, ax_top); #xlims!(ax, low=minimum(interval)+500, high=maximum(interval))
+hidedecorations!(ax, grid=true, ticks=false, ticklabels=false, label=false)
+hideydecorations!(ax, grid=true, ticks=true, ticklabels=false, label=false)
+hideydecorations!(ax_top, grid=true, ticks=true, ticklabels=true, label=true)
+rowsize!(g_ei_act, 1, Relative(1/5))    
+
+
+##############################################################################################
+#############################  --- eiSTDP knockout analysis --- ##############################
+##############################################################################################
+# --- Load Data ---
+sim_name = string("network_eiSTDP-knockout.h5")
+sim_savedpath = string("./networks_trained/")
+fid = h5open(joinpath(sim_savedpath, sim_name), "r")
+popmembers = read(fid["data"]["popmembers"])
+weights = read(fid["data"]["weights"])
+times = read(fid["data"]["times"])
+weightsEE_tr = read(fid["data"]["weightsEE"])
+weightsEI_tr = read(fid["data"]["weightsEI"])
+weightsIE_tr = read(fid["data"]["weightsIE"])
+close(fid)
+
+weightsEE = sum(weights[popmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :] ./ count(i->i>0, weights[popmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :]
+weightsEI = sum(weights[popmembers[:, :], ipopmembers[:, :]], dims=(1, 3))[1, :, 1, :] ./ count(i->i>0, weights[popmembers[:, :], ipopmembers[:, :]], dims=(1, 3))[1, :, 1, :]
+weightsIE = sum(weights[ipopmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :] ./ count(i->i>0, weights[ipopmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :]
+
+
+########################################################
+################ --- E-to-E weights --- ################
+########################################################
+
+cl1 = ColorScheme(range(colorant"gray5", colorant"gray80", length=100))
+cl_exc = ColorScheme(range(colorant"gray80", colorant"dodgerblue4", length=100))
+excitation_cs = vcat(get(cl1, LinRange(0, 1, 100)), get(cl_exc, LinRange(0, 1, 100)))
+
+Npop = size(weightsEE)[1]
+line_positions = collect(seq_length+.5:seq_length:Npop+.5)
+
+ax = Axis(g_ei_anal[1:3, 1:2], xlabel=L"\text{pre }E\text{-assembly}", ylabel=L"\text{post }E\text{-assembly}", xlabelsize=labelsize, ylabelsize=labelsize,
+            xticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), xticklabelsize=ticklabelsize, xgridvisible=false,
+            yticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), yticklabelsize=ticklabelsize, ygridvisible=false,
+            aspect=1)
+ht = heatmap!(ax, weightsEE, colormap=excitation_cs)
+hlines!(ax, line_positions, linewidth=linewidth, color=:firebrick, linestyle=:dot)
+vlines!(ax, line_positions, linewidth=linewidth, color=:firebrick, linestyle=:dot)
+
+for (ind, ln) in enumerate(line_positions)
+    vlines!(ax, ln, ymin=(ind-1)*seq_length/Npop, ymax=(ind+1)*seq_length/Npop, linewidth=linewidth, color=:firebrick)
+    hlines!(ax, ln, xmin=(ind-1)*seq_length/Npop, xmax=(ind+1)*seq_length/Npop, linewidth=linewidth, color=:firebrick)
+end
+
+Colorbar(g_ei_anal[1:3, 3], ht, size=colorbarsize, label=L"\text{mean syn. str. (pF)}", height=Relative(.6), labelsize=labelsize, ticklabelsize=ticklabelsize)
+
+########################################################
+################ --- I₂-to-E weights --- ###############
+########################################################
+
+cl1 = ColorScheme(range(colorant"gray5", colorant"gray80", length=100))
+cl_inh = ColorScheme(range(colorant"gray80", colorant"firebrick", length=100))
+inhibition_cs = vcat(get(cl1, LinRange(0, 1, 100)), get(cl_inh, LinRange(0, 1, 100)))
+    
+ax = Axis(g_ei_anal[4:6, 1:2], xlabel=L"\text{pre }I_2 \text{-assembly}", ylabel=L"\text{post }E \text{-assembly}", xlabelsize=labelsize, ylabelsize=labelsize,
+            xticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), xticklabelsize=ticklabelsize, xgridvisible=false,
+            yticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), yticklabelsize=ticklabelsize, ygridvisible=false,
+            aspect=1)
+ht = heatmap!(ax, weightsIE, colormap=inhibition_cs)
+hlines!(line_positions, linewidth=linewidth, color=:dodgerblue4, linestyle=:dot)
+vlines!(line_positions, linewidth=linewidth, color=:dodgerblue4, linestyle=:dot)
+
+for (ind, ln) in enumerate(line_positions)
+    vlines!(ln, ymin=(ind-1)*seq_length/Npop, ymax=(ind+1)*seq_length/Npop, linewidth=linewidth, color=:dodgerblue4)
+    hlines!(ln, xmin=(ind-1)*seq_length/Npop, xmax=(ind+1)*seq_length/Npop, linewidth=linewidth, color=:dodgerblue4)
+end
+
+Colorbar(g_ei_anal[4:6, 3], ht, size=colorbarsize, label=L"\text{mean syn. str. (pF)}", height=Relative(.6), labelsize=labelsize, ticklabelsize=ticklabelsize)
+
+########################################################
+################ --- Extra plot here --- ###############
+########################################################
+
+
+########################################################
+################ --- E-to-E weights --- ################
+########################################################
+ax_ee = Axis(g_ei_anal[1:2, 4:5], #xlabel=L"\text{training time (%)}", ylabel=L"\text{mean synaptic strength (pF)}",
+            # xticks=([0, 125, 250, 375, 500], [L"0", L"25", L"50", L"75", L"100"]),
+            yticks=([5, 10, 15], [L"5", L"10", L"15"]),
+            xlabelsize=labelsize, ylabelsize=labelsize, xticklabelsize=ticklabelsize, yticklabelsize=ticklabelsize)#,
+            # limits=(-2.5, 505.5, 1., 19.5))
+for ipop = 1:Npop
+    lines!(ax_ee, weightsEE_tr[ipop, ipop, 1:500], linewidth=linewidth, color=ColorSchemes.Blues[7], label=L"\text{E-assembly}")
+end
+# axislegend(ax_ee, position=(.9, .7), labelsize=labelsize, titlesize=textsize, merge=true)
+
+########################################################
+################ --- I₁-to-E weights --- ###############
+########################################################
+ax_i1 = Axis(g_ei_anal[3:4, 4:5], xlabel=L"\text{training time (%)}", #ylabel=L"\text{mean synaptic strength (pF)}",
+            # xticks=([0, 125, 250, 375, 500], [L"0", L"25", L"50", L"75", L"100"]),
+            yticks=([60, 80, 100], [L"60", L"80", L"100"]),
+            xlabelsize=labelsize, ylabelsize=labelsize, xticklabelsize=ticklabelsize, yticklabelsize=ticklabelsize)#,
+            # limits=(-2.5, 505.5, 48.1, 115))
+for ipop = 2:Npop
+    (mod(ipop, seq_length) == 1) && (continue)
+    lines!(ax_i1, mean(weightsIE_tr[1:(Ncells-Ne-Ni2), ipop, 1:500], dims=1)[:], linewidth=linewidth, color=ColorSchemes.Reds[9], label=L"I_1\text{-to-}E")
+end
+# axislegend(ax_i1, position=(.9, .3), labelsize=labelsize, titlesize=textsize, merge=true)
+
+########################################################
+################ --- I₂-to-E weights --- ###############
+########################################################
+ax_i2 = Axis(g_ei_anal[5:6, 4:5], xlabel=L"\text{training time (%)}", #ylabel=L"\text{mean synaptic strength (pF)}",
+            xticks=([0, 125, 250, 375, 500], [L"0", L"25", L"50", L"75", L"100"]),
+            yticks=([30, 60, 90], [L"30", L"60", L"90"]),
+            xlabelsize=labelsize, ylabelsize=labelsize, xticklabelsize=ticklabelsize, yticklabelsize=ticklabelsize)#,
+            # limits=(-2.5, 505.5, 15.1, 106.))
+for ipop = 1:Npop
+    lines!(ax_i2, mean(weightsIE_tr[ipopmembers[:, ipop] .- (Ne), ipop, 1:500], dims=1)[:], linewidth=linewidth, color=:gray70, label=L"I_2-\text{to}-E \text{ recurrent}")
+end
+
+for ipop = 2:Npop
+    (mod(ipop, seq_length) == 1) && (continue)
+    lines!(ax_i2, mean(weightsIE_tr[ipopmembers[:, ipop] .- (Ne), ipop-1, 1:500], dims=1)[:], linewidth=linewidth, color=:black, label=L"I_2\text{-to-}E \text{ preceding}")
+end
+
+for ipop = 2:Npop
+    (mod(ipop, seq_length) == 1) && (continue)
+    lines!(ax_i2, mean(weightsIE_tr[ipopmembers[:, ipop-1] .- (Ne), ipop, 1:500], dims=1)[:], linewidth=linewidth, color=ColorSchemes.Reds[6], label=L"I_2\text{-to-}E \text{ succeeding}")
+end
+# axislegend(ax_i2, position=(.1, .9), labelsize=labelsize, titlesize=textsize, merge=true)
+
+linkxaxes!(ax_ee, ax_i1, ax_i2)
+hidexdecorations!(ax_ee, grid=false, ticks=true, ticklabels=true, label=true)
+hidexdecorations!(ax_i1, grid=false, ticks=true, ticklabels=true, label=true)
+
+# Label(g_i1_anal[4:5, 4], L"\text{mean synaptic strength (pF)}",
+#     fontsize=labelsize, rotation=π/2)
+#
+
+
+Label(g_i1_act[1, 0, TopLeft()], L"\textbf{a}",
+    fontsize=subplotlabelsize,
+    font=:bold,
+    padding=(0, 5, 5, 0),
+    halign=:right)
+
+Label(g_i2_act[1, 0, TopLeft()], L"\textbf{b}",
+    fontsize=subplotlabelsize,
+    font=:bold,
+    padding=(0, 5, 5, 0),
+    halign=:right)
+
+Label(g_ei_act[1, 0, TopLeft()], L"\textbf{c}",
+    fontsize=subplotlabelsize,
+    font=:bold,
+    padding=(0, 5, 5, 0),
+    halign=:right)
+#
+
+colsize!(g_i1_act, 0, Relative(0))
+colsize!(g_i2_act, 0, Relative(0))
+colsize!(g_ei_act, 0, Relative(0))
+
+rowgap!(fig.layout, 1, Relative(.05))
+rowgap!(fig.layout, 2, Relative(.05))
+
+(!isdir(output_dir)) && (mkpath(output_dir))
+save(joinpath(output_dir, string("figure_3.png")), fig)
 end
