@@ -167,7 +167,7 @@ function getPopulationBinRates(spikeTimes::Matrix{Float64}, popmembers::Matrix{I
 	rates::Matrix{Int64} = zeros(Nsteps, Npop)
 	# Compute instantaneous population rates
 	for ipop = 1:Npop
-		for mem in popmembers[:, ipop]
+		for mem in filter(i->i>0, popmembers[:, ipop])
 			for tt in filter(i->(interval[1]<i<interval[end]), spikeTimes[mem, :])
 				((tt - interval[1]) < dt) && (continue)
 				rates[round(Int, (tt - interval[1]) / dt), ipop] += 1

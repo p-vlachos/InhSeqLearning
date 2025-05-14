@@ -12,10 +12,10 @@ using CairoMakie
 using ColorSchemes
 using Colors
 
-sim_savedpath = "./networks_trained/"
-output_dir = "./output_analysis/"
+sim_savedpath = "./networks_trained_original/"
+output_dir = "./output_analysis_original/"
 
-sim_num = 4
+sim_num = 1
 sim_name = string("network_", sim_num, ".h5")
 fid = h5open(joinpath(sim_savedpath, sim_name), "r")
 popmembers = read(fid["data"]["popmembers"])
@@ -30,7 +30,25 @@ ipopmembers = findI2populations(weights, popmembers, iipop_len=25)
 Npop = size(popmembers)[2]
 Ncells = size(weights)[1]
 Ne = round(Int, Ncells*0.8)
-Ni2 = 250
+Ni2 = 500
+
+
+
+
+
+
+fig = Figure()
+ax = Axis(fig[1, 1])
+
+for ipop = 1:Npop
+    # (mod(ipop, seq_length) == 1) && (continue)
+    # lines!(ax, weightsEE[ipop, ipop, :]) #, linewidth=linewidth, color=ColorSchemes.Reds[9], label=L"I_1\text{-to-}E")
+	# lines!(ax, mean(weightsEI[ipopmembers[:, ipop] .- 4500, ipop, :], dims=1)[:])
+	lines!(ax, mean(weightsIE[ipopmembers[:, ipop] .- 4500, ipop, :], dims=1)[:])
+end
+fig
+
+
 
 
 # Calculate the overlap between I2 populations

@@ -4,12 +4,13 @@ using InhSequences
 using Statistics
 using HDF5
 
-# include("plots.jl")
+include("plots.jl")
 
 simulation = 1
 # sim_name = string("network", simulation, "_.h5")
 # sim_savedpaths = ["./networks_trained/", "./networks_trained_spontaneous/", "./networks_trained_stimulation/"]
-sim_savedpaths = ["./networks_trained_spontaneous/", "./networks_trained_stimulation/"]
+# sim_savedpaths = ["./networks_trained_spontaneous/", "./networks_trained_stimulation/"]
+sim_savedpaths = ["./networks_trained_original_spontaneous/", "./networks_trained_original_stimulation/"]
 
 for sim_savedpath in sim_savedpaths
     for sim = simulation:simulation
@@ -17,12 +18,12 @@ for sim_savedpath in sim_savedpaths
         # if sim_savedpath == "./networks_trained/"
         #     sim_name = string("network_", sim,".h5")
         # else  _i1STDP-knockout
-        if sim_savedpath == "./networks_trained_spontaneous/"
-            # sim_name = string("network_", sim,"_spontaneous.h5")
-            sim_name = string("network_", sim,"_i1STDP-knockout_spontaneous.h5")
+        if sim_savedpath == "./networks_trained_original_spontaneous/"
+            sim_name = string("network_", sim,"_spontaneous.h5")
+            # sim_name = string("network_", sim,"_i1STDP-knockout_spontaneous.h5")
         else
-            # sim_name = string("network_", sim,"_stimulation.h5")
-            sim_name = string("network_", sim,"_i1STDP-knockout_stimulation.h5")
+            sim_name = string("network_", sim,"_stimulation.h5")
+            # sim_name = string("network_", sim,"_i1STDP-knockout_stimulation.h5")
         end
 
         fid = h5open(joinpath(sim_savedpath, sim_name), "r")
@@ -35,24 +36,38 @@ for sim_savedpath in sim_savedpaths
         close(fid)
 
         Ncells = size(weights)[1]
-        Ne = 3000
-        Ni2 = 750
-        ipopmembers = findI2populations(weights, popmembers, iipop_len=27, Ni2=Ni2)
+        Npop = size(popmembers)[2]
+        Ne = 4000 #3000
+        Ni2 = 500 #750
+        ipopmembers = findI2populations(weights, popmembers, iipop_len=50, Ni2=Ni2)
         # output_dir = string("./output_analysis/simulation_", sim, "/tests/")
-        output_dir = string("./output_analysis/simulation_", sim)
+        output_dir = string("./output_analysis_original/simulation_original_", sim)
 
-        if sim_savedpath == "./networks_trained_spontaneous/"
+        if sim_savedpath == "./networks_trained_original_spontaneous/"
             # seq_score = sequentialityScore(getPopulationRates(times, popmembers; interval=5_000:10_000))
-            seq_score, _, sequence = findOptimalDecoder(times, popmembers, interval=5_000:20_000, dt=.125, seq_length=3)
+            seq_score, _, sequence = findOptimalDecoder(times, popmembers, interval=5_000:20_000, dt=.125, seq_length=4)
             @info "For the ", sim_savedpath[3:end-1], " case sequentiality is: ", seq_score
-            plotNetworkActivity(times, popmembers, ipopmembers; interval=5_000:20_000, seq_length=3, name=string("_testinActivitySpontaneous_", sim), output_dir=output_dir)
-            plotWeightsEE(mean(weights[popmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :], name="_testinEE", output_dir=output_dir, seq_length=3)
-            plotWeightsEI(mean(weights[popmembers[:, :], ipopmembers[:, :]], dims=(1, 3))[1, :, 1, :], name="_testinEI", output_dir=output_dir, seq_length=3)
-            plotWeightsIE(mean(weights[ipopmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :], name="_testinIE", output_dir=output_dir, seq_length=3)
+            plotNetworkActivity(times, popmembers, ipopmembers; interval=5_000:20_000, seq_length=4, name=string("_testinActivitySpontaneous_", sim), output_dir=output_dir)
+            # plotWeightsEE(mean(weights[popmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :], name="_testinEE", output_dir=output_dir, seq_length=3)
+            # plotWeightsEI(mean(weights[popmembers[:, :], ipopmembers[:, :]], dims=(1, 3))[1, :, 1, :], name="_testinEI", output_dir=output_dir, seq_length=3)
+            # plotWeightsIE(mean(weights[ipopmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :], name="_testinIE", output_dir=output_dir, seq_length=3)
+            avgweightsEE = zeros(Npop, Npop)
+            avgweightsEI = zeros(Npop, Npop)
+            avgweightsIE = zeros(Npop, Npop)
+            for ipop = 1:Npop
+                for iipop = 1:Npop
+                    avgweightsEE[ipop, iipop] = sum(weights[filter(i->i>0, popmembers[:, ipop]), filter(i->i>0, popmembers[:, iipop])]) / count(i->i>0, weights[filter(i->i>0, popmembers[:, ipop]), filter(i->i>0, popmembers[:, iipop])])
+                    avgweightsEI[ipop, iipop] = sum(weights[filter(i->i>0, popmembers[:, ipop]), ipopmembers[:, iipop]]) / count(i->i>0, weights[filter(i->i>0, popmembers[:, ipop]), ipopmembers[:, iipop]])
+                    avgweightsIE[ipop, iipop] = sum(weights[ipopmembers[:, ipop], filter(i->i>0, popmembers[:, iipop])]) / count(i->i>0, weights[ipopmembers[:, ipop], filter(i->i>0, popmembers[:, iipop])])
+                end
+            end
+            plotWeightsEE(avgweightsEE, name="_testinEE", output_dir=output_dir, seq_length=4)
+            plotWeightsEI(avgweightsEI, name="_testinEI", output_dir=output_dir, seq_length=4)
+            plotWeightsIE(avgweightsIE, name="_testinIE", output_dir=output_dir, seq_length=4)
         else
-            plotNetworkActivity(times, popmembers, ipopmembers; interval=5_000:20_000, seq_length=3, name=string("_testinActivityStimulation_", sim), output_dir=output_dir)
+            plotNetworkActivity(times, popmembers, ipopmembers; interval=5_000:20_000, seq_length=4, name=string("_testinActivityStimulation_", sim), output_dir=output_dir)
             # seq_score = sequentialityScore(getPopulationRates(times, popmembers; interval=5_000:10_000))
-            seq_score, _, _ = findOptimalDecoder(times, popmembers, interval=5_000:20_000, dt=.125, seq_length=3)
+            seq_score, _, _ = findOptimalDecoder(times, popmembers, interval=5_000:20_000, dt=.125, seq_length=4)
             @info "For the ", sim_savedpath[3:end-1], " case sequentiality is: ", seq_score
         end
     end
