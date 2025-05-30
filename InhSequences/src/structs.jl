@@ -2,7 +2,7 @@
 	#  Parameters needed to generate weight matrix
 	Ne::Int64 = 4000 #3000		    	# Excitatory no. neurons
 	Ni::Int64 = 1000 #750 				# Total Inhibitory no. neurons
-	Ni2::Int64 = 500 #250 				# Inhibitory I₂ no. neurons
+	Ni2::Int64 = 400 				# Inhibitory I₂ no. neurons
 	jee0::Float64 = 2.86 	    	# Initial E➡E strength (pF)
 	jei0::Float64 = 48.7    		# Initial I➡E strength (pF)
 	jie::Float64 = 1.27 	    	# Initial E➡I₁ strength (pF)
@@ -43,9 +43,9 @@ end
 	tauidecay::Float64 = 2. 		# I synapse decay time (ms)
 	taui2rise::Float64 = 5. 		# I synapse rise time (ms)
 	taui2decay::Float64 = 20.  		# I synapse decay time (ms)
-	rex::Float64 = 3.5 				# External input rate to E (kHz)
-	rix::Float64 = 2.  				# External input rate to I₁ (kHz)
-	ri2x::Float64 = 1.55 			# External input rate to I₂ (kHz)
+	rex::Float64 = 4.5 #3.5 				# External input rate to E (kHz)
+	rix::Float64 = 2. #2.  				# External input rate to I₁ (kHz)
+	ri2x::Float64 = 1.2 			# External input rate to I₂ (kHz)
 	jex::Float64 = 1.78 			# External to E strength (pF)
 	jix::Float64 = 1.27 			# External to I strength (pF)
     # --- Plastic synapses, hard bounds ---
@@ -56,7 +56,7 @@ end
 	jiemin::Float64 = .1 			# Minimum E➡I₂ strength (pF)
 	jiemax::Float64 = 4. 			# Maximum E➡I₂ strength (pF)
 	jei2min::Float64 = .01			# Minimum I₂➡E strength (pF)
-	jei2max::Float64 = 243. 		# Maximum I₂➡E strength (pF)
+	jei2max::Float64 = 121. #243. 		# Maximum I₂➡E strength (pF)
 end
 
 @with_kw struct PlasticityParameters
@@ -75,7 +75,7 @@ end
 	# --- iSTDP₂ ---
 	tau_i_r::Float64 = 30. 			# iSTDP₂ rise time constant (ms)
 	tau_i_d::Float64 = 200. 		# iSTDP₂ decay time constant (ms)
-	ilamda::Float64 = 1. #5.			# iSTDP₂ learning rate
+	ilamda::Float64 = 2. #5.			# iSTDP₂ learning rate
 	# --- eiSTDP ---
 	tau_ie::Float64 = 20.			# eiSTDP time constant (ms)
 	eta_ie::Float64 = .007  		# eiSTDP learning rate (pA)

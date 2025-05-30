@@ -31,7 +31,7 @@ function plotNetworkActivity(times::Matrix{Float64}, popmembers::Matrix{Int64}, 
     rowcount::Int64 = 1
     ytickcount::Int64 = 1
 
-    fig = Figure(resolution=(1080, 720))
+    fig = Figure(size=(1080, 720))
     ax = Axis(fig[1, 1], xlabel=L"\text{simulation time (s)}", ylabel=L"\text{sequences (neurons)}", xlabelsize=labelsize, ylabelsize=labelsize,
                 xticks=(plot_interval, [L"%$(x)" for x = 0:length(plot_interval)-1]), xticklabelsize=ticklabelsize, xgridvisible=false,
                 yticklabelsize=ticklabelsize, ygridvisible=false,
@@ -111,7 +111,7 @@ function plotWeightsEE(weightsEE::Matrix{Float64}; seq_length::Int64=3, name::Ab
     ticklabelsize::Int64 = 22
     linewidth::Float64 = 2.
 
-    fig = Figure(resolution=(920, 720))
+    fig = Figure(size=(920, 720))
     ax = Axis(fig[1, 1], xlabel=L"\text{presynaptic }E\text{-assembly}", ylabel=L"\text{postsynaptic }E\text{-assembly}", xlabelsize=labelsize, ylabelsize=labelsize,
                 xticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), xticklabelsize=ticklabelsize, xgridvisible=false,
                 yticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), yticklabelsize=ticklabelsize, ygridvisible=false)
@@ -143,7 +143,7 @@ function plotWeightsIE(weightsIE::Matrix{Float64}; seq_length::Int64=3, name::Ab
     ticklabelsize::Int64 = 22
     linewidth::Float64 = 2.
     
-    fig = Figure(resolution=(920, 720))
+    fig = Figure(size=(920, 720))
     ax = Axis(fig[1, 1], xlabel=L"\text{presynaptic }E \text{-assembly}", ylabel=L"\text{postsynaptic }I_2 \text{-assembly}", xlabelsize=labelsize, ylabelsize=labelsize,
                 xticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), xticklabelsize=ticklabelsize, xgridvisible=false,
                 yticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), yticklabelsize=ticklabelsize, ygridvisible=false)
@@ -175,7 +175,7 @@ function plotWeightsEI(weightsEI::Matrix{Float64}; seq_length::Int64=3, name::Ab
     ticklabelsize::Int64 = 22
     linewidth::Float64 = 2.
 
-    fig = Figure(resolution=(920, 720))
+    fig = Figure(size=(920, 720))
     ax = Axis(fig[1, 1], xlabel=L"\text{presynaptic }E \text{-assembly}", ylabel=L"\text{postsynaptic }I_2 \text{-assembly}", xlabelsize=labelsize, ylabelsize=labelsize,
                 xticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), xticklabelsize=ticklabelsize, xgridvisible=false,
                 yticks=(1:seq_length:Npop, [L"%$(x)" for x=1:seq_length:Npop]), yticklabelsize=ticklabelsize, ygridvisible=false)

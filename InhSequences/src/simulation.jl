@@ -20,6 +20,15 @@ function simnew(stim::Matrix{Float64}, T::Int64; random_seed::Int64=2817)
 	@. weights[(Ne+1):(Ncells-Ni2), (Ncells-Ni2+1):Ncells] = jii12
 	@. weights[(Ncells-Ni2+1):Ncells, (Ncells-Ni2+1):Ncells] = jii2
 
+	# New manipulation of weights
+	@. weights[(Ne+1):(Ncells-Ni2), (Ncells-Ni2+1):Ncells] = 0.		# I₁ → I₂
+	@. weights[(Ncells-Ni2+1):Ncells, (Ne+1):(Ncells-Ni2)] = 0.		# I₂ → I₁
+
+	@. weights[1:Ne, (Ncells-Ni2+1):Ncells] = 1.		# E → I₂
+	
+	# @. weights[(Ncells-Ni2+1):Ncells, (Ncells-Ni2+1):Ncells] = 0.		# I₂ → I₂
+
+
 	weights[rand(Ncells, Ncells) .> p] .= 0.
 
 	# for i = 1:Ne

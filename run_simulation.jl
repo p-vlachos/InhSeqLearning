@@ -7,7 +7,7 @@ using HDF5
 sim_savedpath = "./networks_trained_original/"
 
 # Set the parameters for simulation
-loadnet = true				# Choose between simulating an existing or a novel network
+loadnet = false				# Choose between simulating an existing or a novel network
 savenet = true				# Save the network after stimulation
 
 random_seeds = [2061, 5987, 3642, 9465, 1837, 8174, 9729, 8537, 1835, 6935, 9316, 8425, 7167, 9921, 2785, 6309, 1482]	# Train/test seeds	(no. 11 is for showing decay)
@@ -34,7 +34,7 @@ for sim_num = 1:1
 			stim = zeros(4, 12)
 		end
 	else
-		# Full train 4 sequences x 3 assemblies
+		# # Full train 4 sequences x 3 assemblies
 		# T = 1_000_000
 		# stim = makeStimSeq(4, 20, seq_len=3)
 		# Full train 5 sequences x 4 assemblies
@@ -76,19 +76,18 @@ for sim_num = 1:1
 end
 end
 
-
-
-
 ####################################################################################
 #### _________________________ --- Manipulations --- __________________________ ####
 ####################################################################################
 include("plots.jl")
 
+stim_modes = ["stimulation"]#, "stimulation"]	# Choose between spontaneous or brief stimulation (only for loaded networks)
+
 manipulation_type = ["Eass-Eass_within", "Eass-Eass_between", "Eass-Erest", "Erest-Eass", # E-to-E manipulations
 					"Eass-I1", "Erest-I1", "Eass-I2ass(within)", "Eass-I2ass(next)", "Eass-I2ass(pre)", "Eass-I2", "Erest-I2", "E-I2", # E-to-I manipulations
 					"I1-Eass", "I1-Erest", "I2ass-Eass(within)", "I2ass-Eass(next)", "I2ass-Eass(pre)", "I2-Eass", "I2-Erest", "I2-E", # I-to-E manipulations
 					"I1-I1", "I1-I2", "I2-I2", "I2-I1"] # I-to-I manipulations
-manipulation_value = [0.7, 0.85, 0.15, 0.3]
+manipulation_value = [0.7, 0.85, 1.15, 1.3]
 
 # Define parameters
 T = 20_000
@@ -114,11 +113,13 @@ for stim_mode in stim_modes
 	end
 	sim_savepath = string("./networks_trained_original_testing_", stim_mode, "/")
 	for (ind, mant) in enumerate(manipulation_type)
+		if ind < 24
+			continue
+		end
 		for manv in manipulation_value
 			fid = h5open(joinpath(sim_savedpath, sim_name), "r")
 			weights_old = read(fid["data"]["weights"])
 			close(fid)
-
 			# Apply manipulation
 			if ind == 1			# Eass-to-Eass (within)
 				for ipop = 1:Npop
@@ -203,7 +204,7 @@ for stim_mode in stim_modes
 					if ipop in 4:seq_length:Npop
 						continue
 					end
-					endemembers = filter(i->i>0, popmembers[:, ipop])
+					emembers = filter(i->i>0, popmembers[:, ipop])
 					weights_old[ipopmembers[:, (ipop+1)], emembers] *= manv
 				end
 			elseif ind == 17	# I2(pre)-to-Eass
@@ -251,7 +252,7 @@ for stim_mode in stim_modes
 				cd("..")
 			end
 
-			output_dir = string("./output_analysis_original/simulation_original_", stim_mode, "_", ind)
+			output_dir = string("./output_analysis_original/simulation_original_", stim_mode, "_", ind, "/", mant)
 			(!ispath(output_dir)) && (mkpath(output_dir))
 
 			if stim_mode == "spontaneous"
@@ -266,9 +267,9 @@ for stim_mode in stim_modes
 						avgweightsIE[ipop, iipop] = sum(weights[ipopmembers[:, ipop], filter(i->i>0, popmembers[:, iipop])]) / count(i->i>0, weights[ipopmembers[:, ipop], filter(i->i>0, popmembers[:, iipop])])
 					end
 				end
-				plotWeightsEE(avgweightsEE, name="_testinEE", output_dir=output_dir, seq_length=4)
-				plotWeightsEI(avgweightsEI, name="_testinEI", output_dir=output_dir, seq_length=4)
-				plotWeightsIE(avgweightsIE, name="_testinIE", output_dir=output_dir, seq_length=4)
+				plotWeightsEE(avgweightsEE, name=string("_testinEE_", manv), output_dir=output_dir, seq_length=4)
+				plotWeightsEI(avgweightsEI, name=string("_testinEI_", manv), output_dir=output_dir, seq_length=4)
+				plotWeightsIE(avgweightsIE, name=string("_testinIE_", manv), output_dir=output_dir, seq_length=4)
 			else
 				plotNetworkActivity(times, popmembers, ipopmembers; interval=5_000:20_000, seq_length=4, name=string("_testinActivityStimulation_", manv), output_dir=output_dir)
 			end
