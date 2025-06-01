@@ -7,7 +7,7 @@ using HDF5
 sim_savedpath = "./networks_trained_original/"
 
 # Set the parameters for simulation
-loadnet = false				# Choose between simulating an existing or a novel network
+loadnet = true				# Choose between simulating an existing or a novel network
 savenet = true				# Save the network after stimulation
 
 random_seeds = [2061, 5987, 3642, 9465, 1837, 8174, 9729, 8537, 1835, 6935, 9316, 8425, 7167, 9921, 2785, 6309, 1482]	# Train/test seeds	(no. 11 is for showing decay)
@@ -28,7 +28,8 @@ for sim_num = 1:1
 		T = 20_000
 		if stim_mode == "stimulation"
 			# Brief stimulation of 1st assembly in sequences
-			stim = makeStimSeq_brief(T, Npop=12, seq_len=3, seq_num=4, stim_rate=4., randomize=false)
+			# stim = makeStimSeq_brief(T, Npop=12, seq_len=3, seq_num=4, stim_rate=4., randomize=false)
+			stim = makeStimSeq_brief(T, Npop=20, seq_len=4, seq_num=5, stim_rate=8., randomize=false)
 		else
 			# Spontaneous activity (no stimulation)
 			stim = zeros(4, 12)

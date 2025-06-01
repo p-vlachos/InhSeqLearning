@@ -56,7 +56,7 @@ end
 	jiemin::Float64 = .1 			# Minimum E➡I₂ strength (pF)
 	jiemax::Float64 = 4. 			# Maximum E➡I₂ strength (pF)
 	jei2min::Float64 = .01			# Minimum I₂➡E strength (pF)
-	jei2max::Float64 = 121. #243. 		# Maximum I₂➡E strength (pF)
+	jei2max::Float64 = 48.7 #80. # 121. 		# Maximum I₂➡E strength (pF)
 end
 
 @with_kw struct PlasticityParameters
@@ -75,7 +75,7 @@ end
 	# --- iSTDP₂ ---
 	tau_i_r::Float64 = 30. 			# iSTDP₂ rise time constant (ms)
 	tau_i_d::Float64 = 200. 		# iSTDP₂ decay time constant (ms)
-	ilamda::Float64 = 2. #5.			# iSTDP₂ learning rate
+	ilamda::Float64 = 3. #5.			# iSTDP₂ learning rate
 	# --- eiSTDP ---
 	tau_ie::Float64 = 20.			# eiSTDP time constant (ms)
 	eta_ie::Float64 = .007  		# eiSTDP learning rate (pA)
