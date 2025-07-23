@@ -6,7 +6,7 @@ using HDF5
 
 include("plots.jl")
 
-simulation = 1
+simulation = 4
 # sim_name = string("network", simulation, "_.h5")
 # sim_savedpaths = ["./networks_trained/", "./networks_trained_spontaneous/", "./networks_trained_stimulation/"]
 # sim_savedpaths = ["./networks_trained_spontaneous/", "./networks_trained_stimulation/"]
@@ -38,7 +38,7 @@ for sim_savedpath in sim_savedpaths
         Ncells = size(weights)[1]
         Npop = size(popmembers)[2]
         Ne = 4000 #3000
-        Ni2 = 500 #750
+        Ni2 = 400 #750
         ipopmembers = findI2populations(weights, popmembers, iipop_len=50, Ni2=Ni2)
         # output_dir = string("./output_analysis/simulation_", sim, "/tests/")
         output_dir = string("./output_analysis_original/simulation_original_", sim)

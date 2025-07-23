@@ -17,7 +17,7 @@ function simnew(stim::Matrix{Float64}, T::Int64; random_seed::Int64=2817)
 	@. weights[1:Ne, (Ne+1):Ncells] = jie
 	@. weights[(Ne+1):Ncells, 1:Ne] = jei0
 	@. weights[(Ne+1):Ncells, (Ne+1):Ncells] = jii
-	@. weights[(Ne+1):(Ncells-Ni2), (Ncells-Ni2+1):Ncells] = jii12
+	# @. weights[(Ne+1):(Ncells-Ni2), (Ncells-Ni2+1):Ncells] = jii12
 	@. weights[(Ncells-Ni2+1):Ncells, (Ncells-Ni2+1):Ncells] = jii2
 
 	# New manipulation of weights
@@ -99,6 +99,10 @@ function sim(stim::Matrix{Float64}, weights::Matrix{Float64}, popmembers::Matrix
 	@unpack tauy, eta, r0, tau_i_r, tau_i_d, ilamda, tau_ie, eta_ie, Adep_ie = PlasticityParameters()
 	@unpack dt, dtnormalize, stdpdelay, Nspikes = SimulationParameters()
 	Random.seed!(random_seed)
+
+	# Modifications here:
+	# rix *= 1.1
+	# ri2x *= 1.1
 
 	# _________________________--- Simulation ---______________________________
 	Ncells::Int64 = Ne + Ni									# Total number of neurons

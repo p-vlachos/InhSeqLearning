@@ -75,9 +75,9 @@ times = read(fid["data"]["times"])
 close(fid)
 
 # Parameters
-Ne = 3000
-Ni2 = 250
-seq_length = 3
+Ne = 4000
+Ni2 = 400
+seq_length = 4
 Ni_members = 25
 
 Ncells = size(times)[1]
@@ -303,10 +303,12 @@ rowsize!(g_raster, 1, Relative(1/5))
 ########################################################
 # --- Load Data ---
 net_num = 1
-seed_num = 1
+# seed_num = 1
 mode = "spontaneous"
-sim_name = string("network_1_", mode, "_seed_", seed_num, ".h5")
-sim_savedpath = string("./networks_trained_", mode, "/network_", net_num, "/")
+# sim_name = string("network_1_", mode, "_seed_", seed_num, ".h5")
+sim_name = string("network_1_", mode, ".h5")
+# sim_savedpath = string("./networks_trained_", mode, "/network_", net_num, "/")
+sim_savedpath = string("./networks_trained_", mode, "/")
 fid = h5open(joinpath(sim_savedpath, sim_name), "r")
 popmembers = read(fid["data"]["popmembers"])
 weights = read(fid["data"]["weights"])
@@ -429,7 +431,7 @@ rowsize!(g_raster, 1, Relative(1/5))
 
 # Parameters
 seq_number = 1
-seq_length = 3
+seq_length = 4
 interval = 15_400:15_900
 
 rates = binRates(times, interval=interval, window=100)
@@ -456,7 +458,7 @@ ax = Axis(g_react[1:2, 1], xlabel=L"\text{simulation time (ms)}", ylabel=L"\text
             limits=(minimum(interval), maximum(interval), 1, ylim_max))
 # Excitatoy assembly members
 for pp = (((seq_number-1)*seq_length)+1):(seq_number*seq_length)
-    for indx in popmembers[:, pp]
+    for indx in filter(i->i>0, popmembers[:, pp])
         x_vals = times[indx, 1:round(Int, ns[indx])]
         y_vals = rowcount * ones(length(x_vals))
         scatter!(ax, x_vals, y_vals, color=ColorSchemes.Blues[5+ytickcount], markersize=markersize)
@@ -490,7 +492,7 @@ ax_exc = Axis(g_react[1, 2], xlabel="", ylabel=L"E-\text{assembly firing rate (H
                 # limits=(minimum(interval), maximum(interval), -0.2, 18.3))
 # Plot mean firing rates
 for (indx, pp) in enumerate((((seq_number-1)*seq_length)+1):(seq_number*seq_length))
-    lines!(ax_exc, interval, vec(mean(rates[popmembers[:, pp], :], dims=1)), color=ColorSchemes.Blues[5+indx], linewidth=linewidth, label=L"\text{E}%$(indx)")
+    lines!(ax_exc, interval, vec(mean(rates[filter(i->i>0, popmembers[:, pp]), :], dims=1)), color=ColorSchemes.Blues[5+indx], linewidth=linewidth, label=L"\text{E}%$(indx)")
 end
 axislegend(ax_exc, position=(0.99, 0.99), labelsize=legendlabelsize)
 
@@ -509,144 +511,144 @@ hidexdecorations!(ax_exc, grid=false, ticks=true, ticklabels=true, label=true)
 
 colgap!(g_react, 1, Relative(.05))
 
-##############################################################################################
-############################# --- Cross-correlation & Delays --- #############################
-##############################################################################################
+# ##############################################################################################
+# ############################# --- Cross-correlation & Delays --- #############################
+# ##############################################################################################
 
-activity_type = "spontaneous"   # Choose between "stimulation" or "spontaneous"
-sim_name = string("cross_corr_", activity_type, ".h5")
-sim_savedpath = "./analysis_data/"
+# activity_type = "spontaneous"   # Choose between "stimulation" or "spontaneous"
+# sim_name = string("cross_corr_", activity_type, ".h5")
+# sim_savedpath = "./analysis_data/"
 
-fid = h5open(joinpath(sim_savedpath, sim_name), "r")
-crossEE = read(fid["data"]["crossEE"])
-crossEI = read(fid["data"]["crossEI"])
-crossIE = read(fid["data"]["crossIE"])
-close(fid)
+# fid = h5open(joinpath(sim_savedpath, sim_name), "r")
+# crossEE = read(fid["data"]["crossEE"])
+# crossEI = read(fid["data"]["crossEI"])
+# crossIE = read(fid["data"]["crossIE"])
+# close(fid)
 
 
-Nseq = Npop/seq_length
-# Average over all simulations
-avg_cross = mean(crossEE, dims=4)[:, :, :, 1]
-# Average over all sequences (for 4 seq. of length 3)
-cross0 = mean(avg_cross[:, 1, 1], dims=2)
-cross0 += mean(avg_cross[:, 4, 4], dims=2)
-cross0 += mean(avg_cross[:, 7, 7], dims=2)
-cross0 += mean(avg_cross[:, 10, 10], dims=2)
+# Nseq = Npop/seq_length
+# # Average over all simulations
+# avg_cross = mean(crossEE, dims=4)[:, :, :, 1]
+# # Average over all sequences (for 4 seq. of length 3)
+# cross0 = mean(avg_cross[:, 1, 1], dims=2)
+# cross0 += mean(avg_cross[:, 4, 4], dims=2)
+# cross0 += mean(avg_cross[:, 7, 7], dims=2)
+# cross0 += mean(avg_cross[:, 10, 10], dims=2)
 
-cross1 = mean(avg_cross[:, 1, 2], dims=2)
-cross1 += mean(avg_cross[:, 4, 5], dims=2)
-cross1 += mean(avg_cross[:, 7, 8], dims=2)
-cross1 += mean(avg_cross[:, 10, 11], dims=2)
+# cross1 = mean(avg_cross[:, 1, 2], dims=2)
+# cross1 += mean(avg_cross[:, 4, 5], dims=2)
+# cross1 += mean(avg_cross[:, 7, 8], dims=2)
+# cross1 += mean(avg_cross[:, 10, 11], dims=2)
 
-cross2 = mean(avg_cross[:, 1, 3], dims=2)
-cross2 += mean(avg_cross[:, 4, 6], dims=2)
-cross2 += mean(avg_cross[:, 7, 9], dims=2)
-cross2 += mean(avg_cross[:, 10, 12], dims=2)
+# cross2 = mean(avg_cross[:, 1, 3], dims=2)
+# cross2 += mean(avg_cross[:, 4, 6], dims=2)
+# cross2 += mean(avg_cross[:, 7, 9], dims=2)
+# cross2 += mean(avg_cross[:, 10, 12], dims=2)
 
-ax_mean = Axis(g_corr[1, 1], 
-            xlabel=L"\text{lag (ms)}", xlabelsize=labelsize,
-            ylabel=L"\text{cross-correlation}", ylabelsize=labelsize,
-            xticks=([-200., -100., 0., 100., 200.], [L"-200", L"-100", L"0", L"100", L"200"]), xticklabelsize=ticklabelsize,
-            yticks=([0., .5, 1.], [L"0", L"0.5", L"1"]), yticklabelsize=ticklabelsize,
-            limits=(-280, 280, -0.15, 1.1))
-lines!(ax_mean, -400:400, cross0./Nseq, color=ColorSchemes.Blues[6], linewidth=linewidth, label=L"E1-E1")
-lines!(ax_mean, -400:400, cross1./Nseq, color=ColorSchemes.Blues[7], linewidth=linewidth, label=L"E1-E2")
-lines!(ax_mean, -400:400, cross2./Nseq, color=ColorSchemes.Blues[8], linewidth=linewidth, label=L"E1-E3")
-axislegend(ax_mean, position=(0.95, 0.95), labelsize=legendlabelsize)
+# ax_mean = Axis(g_corr[1, 1], 
+#             xlabel=L"\text{lag (ms)}", xlabelsize=labelsize,
+#             ylabel=L"\text{cross-correlation}", ylabelsize=labelsize,
+#             xticks=([-200., -100., 0., 100., 200.], [L"-200", L"-100", L"0", L"100", L"200"]), xticklabelsize=ticklabelsize,
+#             yticks=([0., .5, 1.], [L"0", L"0.5", L"1"]), yticklabelsize=ticklabelsize,
+#             limits=(-280, 280, -0.15, 1.1))
+# lines!(ax_mean, -400:400, cross0./Nseq, color=ColorSchemes.Blues[6], linewidth=linewidth, label=L"E1-E1")
+# lines!(ax_mean, -400:400, cross1./Nseq, color=ColorSchemes.Blues[7], linewidth=linewidth, label=L"E1-E2")
+# lines!(ax_mean, -400:400, cross2./Nseq, color=ColorSchemes.Blues[8], linewidth=linewidth, label=L"E1-E3")
+# axislegend(ax_mean, position=(0.95, 0.95), labelsize=legendlabelsize)
 
-# ____________ --- Delays --- ____________
-# Average over all simulations
-avg_crossEE = mean(crossEE, dims=4)[:, :, :, 1]
-avg_crossEI = mean(crossEI, dims=4)[:, :, :, 1]
-avg_crossIE = mean(crossIE, dims=4)[:, :, :, 1]
+# # ____________ --- Delays --- ____________
+# # Average over all simulations
+# avg_crossEE = mean(crossEE, dims=4)[:, :, :, 1]
+# avg_crossEI = mean(crossEI, dims=4)[:, :, :, 1]
+# avg_crossIE = mean(crossIE, dims=4)[:, :, :, 1]
 
-# Calculate the peak cross-correlation for each assembly
-max_delayEE = zeros(Npop, Npop)
-max_delayEI = zeros(Npop, Npop)
-max_delayIE = zeros(Npop, Npop)
-for ipop = 1:Npop
-    for iipop = 1:Npop
-        max_delayEE[ipop, iipop] = findmax(avg_crossEE[:, ipop, iipop])[2] - 400
-        max_delayEI[ipop, iipop] = findmax(avg_crossEI[:, ipop, iipop])[2] - 400
-        max_delayIE[ipop, iipop] = findmax(avg_crossIE[:, ipop, iipop])[2] - 400
-    end
-end
+# # Calculate the peak cross-correlation for each assembly
+# max_delayEE = zeros(Npop, Npop)
+# max_delayEI = zeros(Npop, Npop)
+# max_delayIE = zeros(Npop, Npop)
+# for ipop = 1:Npop
+#     for iipop = 1:Npop
+#         max_delayEE[ipop, iipop] = findmax(avg_crossEE[:, ipop, iipop])[2] - 400
+#         max_delayEI[ipop, iipop] = findmax(avg_crossEI[:, ipop, iipop])[2] - 400
+#         max_delayIE[ipop, iipop] = findmax(avg_crossIE[:, ipop, iipop])[2] - 400
+#     end
+# end
 
-# Extract the relative cross-correlation delays
-delaysEE = zeros(4, 3)
-delaysEI = zeros(4, 3)
-delaysIE = zeros(4, 2)
-for ipop = 1:seq_length:Npop
-    delaysEE[div(ipop, seq_length) + 1, 1] = max_delayEE[ipop, ipop]
-    delaysEE[div(ipop, seq_length) + 1, 2] = max_delayEE[ipop, ipop + 1]
-    delaysEE[div(ipop, seq_length) + 1, 3] = max_delayEE[ipop, ipop + 2]
+# # Extract the relative cross-correlation delays
+# delaysEE = zeros(4, 3)
+# delaysEI = zeros(4, 3)
+# delaysIE = zeros(4, 2)
+# for ipop = 1:seq_length:Npop
+#     delaysEE[div(ipop, seq_length) + 1, 1] = max_delayEE[ipop, ipop]
+#     delaysEE[div(ipop, seq_length) + 1, 2] = max_delayEE[ipop, ipop + 1]
+#     delaysEE[div(ipop, seq_length) + 1, 3] = max_delayEE[ipop, ipop + 2]
 
-    delaysEI[div(ipop, seq_length) + 1, 1] = max_delayEI[ipop, ipop]
-    delaysEI[div(ipop, seq_length) + 1, 2] = max_delayEI[ipop, ipop + 1]
-    delaysEI[div(ipop, seq_length) + 1, 3] = max_delayEI[ipop, ipop + 2]
+#     delaysEI[div(ipop, seq_length) + 1, 1] = max_delayEI[ipop, ipop]
+#     delaysEI[div(ipop, seq_length) + 1, 2] = max_delayEI[ipop, ipop + 1]
+#     delaysEI[div(ipop, seq_length) + 1, 3] = max_delayEI[ipop, ipop + 2]
     
-    delaysIE[div(ipop, seq_length) + 1, 1] = max_delayIE[ipop, ipop + 1]
-    delaysIE[div(ipop, seq_length) + 1, 2] = max_delayIE[ipop, ipop + 2]
-end
+#     delaysIE[div(ipop, seq_length) + 1, 1] = max_delayIE[ipop, ipop + 1]
+#     delaysIE[div(ipop, seq_length) + 1, 2] = max_delayIE[ipop, ipop + 2]
+# end
 
-# Fit the mean values to get the recall speed
-fitted_mean = linear_fit(mean(delaysEE, dims=1)[:], [1, 2, 3])
+# # Fit the mean values to get the recall speed
+# fitted_mean = linear_fit(mean(delaysEE, dims=1)[:], [1, 2, 3])
 
-# Compute the error bars
-low_errorsEE = mean(delaysEE, dims=1)[:] - minimum(delaysEE, dims=1)[:]
-high_errorsEE = maximum(delaysEE, dims=1)[:] - mean(delaysEE, dims=1)[:]
+# # Compute the error bars
+# low_errorsEE = mean(delaysEE, dims=1)[:] - minimum(delaysEE, dims=1)[:]
+# high_errorsEE = maximum(delaysEE, dims=1)[:] - mean(delaysEE, dims=1)[:]
 
-low_errorsEI = mean(delaysEI, dims=1)[:] - minimum(delaysEI, dims=1)[:]
-high_errorsEI = maximum(delaysEI, dims=1)[:] - mean(delaysEI, dims=1)[:]
+# low_errorsEI = mean(delaysEI, dims=1)[:] - minimum(delaysEI, dims=1)[:]
+# high_errorsEI = maximum(delaysEI, dims=1)[:] - mean(delaysEI, dims=1)[:]
 
-low_errorsIE = mean(delaysIE, dims=1)[:] - minimum(delaysIE, dims=1)[:]
-high_errorsIE = maximum(delaysIE, dims=1)[:] - mean(delaysIE, dims=1)[:]
+# low_errorsIE = mean(delaysIE, dims=1)[:] - minimum(delaysIE, dims=1)[:]
+# high_errorsIE = maximum(delaysIE, dims=1)[:] - mean(delaysIE, dims=1)[:]
 
-# Plot the data
-ax = Axis(g_corr[2, 1], xlabel=L"\text{delay (ms)}", ylabel=L"\text{activity trajectory}",
-                    yticks=([1, 1.25, 1.5, 2, 2.25, 2.5, 3, 3.25], [L"E1→E1", L"E1→I_21", L"I_21→E2", L"E2→E2", L"E2→I_22", L"I_22→E3", L"E3→E3", L"E3→I_23"]),
-                    # xticks=([0, 25, 50, 75, 100, 125], [L"0", L"25", L"50", L"75", L"100", L"125"]),
-                    xlabelsize=labelsize, ylabelsize=labelsize, xticklabelsize=ticklabelsize, yticklabelsize=ticklabelsize)#, limits=(-0.5, 146, 0.8, 4.5))
+# # Plot the data
+# ax = Axis(g_corr[2, 1], xlabel=L"\text{delay (ms)}", ylabel=L"\text{activity trajectory}",
+#                     yticks=([1, 1.25, 1.5, 2, 2.25, 2.5, 3, 3.25], [L"E1→E1", L"E1→I_21", L"I_21→E2", L"E2→E2", L"E2→I_22", L"I_22→E3", L"E3→E3", L"E3→I_23"]),
+#                     # xticks=([0, 25, 50, 75, 100, 125], [L"0", L"25", L"50", L"75", L"100", L"125"]),
+#                     xlabelsize=labelsize, ylabelsize=labelsize, xticklabelsize=ticklabelsize, yticklabelsize=ticklabelsize)#, limits=(-0.5, 146, 0.8, 4.5))
 
-scatter!(ax, mean(delaysEE, dims=1)[:], [1, 2, 3], markersize=markersize, color=ColorSchemes.Blues[6])
-errorbars!(ax, mean(delaysEE, dims=1)[:], [1, 2, 3], low_errorsEE, high_errorsEE, whiskerwidth=20,  direction=:x, linewidth=linewidth, color=ColorSchemes.Blues[6])
+# scatter!(ax, mean(delaysEE, dims=1)[:], [1, 2, 3], markersize=markersize, color=ColorSchemes.Blues[6])
+# errorbars!(ax, mean(delaysEE, dims=1)[:], [1, 2, 3], low_errorsEE, high_errorsEE, whiskerwidth=20,  direction=:x, linewidth=linewidth, color=ColorSchemes.Blues[6])
 
-scatter!(ax, mean(delaysEI, dims=1)[:], [1.25, 2.25, 3.25], markersize=markersize, color=ColorSchemes.Reds[6])
-errorbars!(ax, mean(delaysEI, dims=1)[:], [1.25, 2.25, 3.25], low_errorsEI, high_errorsEI, whiskerwidth=20,  direction=:x, linewidth=linewidth, color=ColorSchemes.Reds[6])
+# scatter!(ax, mean(delaysEI, dims=1)[:], [1.25, 2.25, 3.25], markersize=markersize, color=ColorSchemes.Reds[6])
+# errorbars!(ax, mean(delaysEI, dims=1)[:], [1.25, 2.25, 3.25], low_errorsEI, high_errorsEI, whiskerwidth=20,  direction=:x, linewidth=linewidth, color=ColorSchemes.Reds[6])
 
-scatter!(ax, mean(delaysIE, dims=1)[:], [1.5, 2.5], markersize=markersize, color=ColorSchemes.BuPu[6])
-errorbars!(ax, mean(delaysIE, dims=1)[:], [1.5, 2.5], low_errorsIE, high_errorsIE, whiskerwidth=20,  direction=:x, linewidth=linewidth, color=ColorSchemes.BuPu[6])
+# scatter!(ax, mean(delaysIE, dims=1)[:], [1.5, 2.5], markersize=markersize, color=ColorSchemes.BuPu[6])
+# errorbars!(ax, mean(delaysIE, dims=1)[:], [1.5, 2.5], low_errorsIE, high_errorsIE, whiskerwidth=20,  direction=:x, linewidth=linewidth, color=ColorSchemes.BuPu[6])
 
 
-##############################################################################################
-################################### --- Sequentiality --- ####################################
-##############################################################################################
+# ##############################################################################################
+# ################################### --- Sequentiality --- ####################################
+# ##############################################################################################
 
-sim_savedpath = "./analysis_data/sequentiality/"
-Nsimulations = 10
-Nseeds = 10
-seq_scores = zeros(Nsimulations, Nseeds)
+# sim_savedpath = "./analysis_data/sequentiality/"
+# Nsimulations = 10
+# Nseeds = 10
+# seq_scores = zeros(Nsimulations, Nseeds)
 
-for sim = 1:Nsimulations
-    sim_name = string("sequentiality_network_", sim,"_", activity_type, ".h5")
-    fid = h5open(joinpath(sim_savedpath, sim_name), "r")
-    seq_scores[sim, :] = read(fid["data"]["scores"])
-    close(fid)
-end
+# for sim = 1:Nsimulations
+#     sim_name = string("sequentiality_network_", sim,"_", activity_type, ".h5")
+#     fid = h5open(joinpath(sim_savedpath, sim_name), "r")
+#     seq_scores[sim, :] = read(fid["data"]["scores"])
+#     close(fid)
+# end
 
-mean_scores = mean(seq_scores, dims=2)[:, 1]
-seq_scores = vec(seq_scores)
+# mean_scores = mean(seq_scores, dims=2)[:, 1]
+# seq_scores = vec(seq_scores)
 
-categories = ones(length(seq_scores)+length(mean_scores))
-categories[end-length(mean_scores):end] .= 2
+# categories = ones(length(seq_scores)+length(mean_scores))
+# categories[end-length(mean_scores):end] .= 2
 
-ax = Axis(g_seq[1, 1], ylabel=L"\text{sequentiality (%)}", ylabelsize=labelsize,
-            xticks=([1, 2], [L"\text{overall}", L"\text{mean / model seed}"]), xticklabelsize=ticklabelsize,
-            yticks=([.9, .95, 1.], [L"90", L"95", L"100"]), yticklabelsize=ticklabelsize,
-            limits=(0, 3, .88, 1.02))
+# ax = Axis(g_seq[1, 1], ylabel=L"\text{sequentiality (%)}", ylabelsize=labelsize,
+#             xticks=([1, 2], [L"\text{overall}", L"\text{mean / model seed}"]), xticklabelsize=ticklabelsize,
+#             yticks=([.9, .95, 1.], [L"90", L"95", L"100"]), yticklabelsize=ticklabelsize,
+#             limits=(0, 3, .88, 1.02))
 
-violin!(ax, categories, vcat(seq_scores, mean_scores), dodge=dodge, dodge_gap=dodge_gap, width=v_width)
-boxplot!(ax, categories, vcat(seq_scores, mean_scores), color=(:white, .0), strokewidth=b_strokewidth, width=b_width, strokecolor=(:black, 1.))
+# violin!(ax, categories, vcat(seq_scores, mean_scores), dodge=dodge, dodge_gap=dodge_gap, width=v_width)
+# boxplot!(ax, categories, vcat(seq_scores, mean_scores), color=(:white, .0), strokewidth=b_strokewidth, width=b_width, strokecolor=(:black, 1.))
 
 
 
@@ -668,23 +670,23 @@ Label(g_react[1, 0, TopLeft()], L"\textbf{c}",
     padding=(0, 5, 5, 0),
     halign=:right)
 
-Label(g_corr[1, 0, TopLeft()], L"\textbf{d}",
-    fontsize=subplotlabelsize,
-    font=:bold,
-    padding=(0, 5, 5, 0),
-    halign=:right)
+# Label(g_corr[1, 0, TopLeft()], L"\textbf{d}",
+#     fontsize=subplotlabelsize,
+#     font=:bold,
+#     padding=(0, 5, 5, 0),
+#     halign=:right)
 
-Label(g_seq[1, 0, TopLeft()], L"\textbf{e}",
-    fontsize=subplotlabelsize,
-    font=:bold,
-    padding=(0, 5, 5, 0),
-    halign=:right)
+# Label(g_seq[1, 0, TopLeft()], L"\textbf{e}",
+#     fontsize=subplotlabelsize,
+#     font=:bold,
+#     padding=(0, 5, 5, 0),
+#     halign=:right)
     
 colsize!(g_model, 0, Relative(0))
 colsize!(g_raster, 0, Relative(0))
 colsize!(g_react, 0, Relative(0))
-colsize!(g_corr, 0, Relative(0))
-colsize!(g_seq, 0, Relative(0))
+# colsize!(g_corr, 0, Relative(0))
+# colsize!(g_seq, 0, Relative(0))
 
 rowgap!(fig.layout, 1, Relative(.05))
 colgap!(fig.layout, 4, Relative(.05))
@@ -747,10 +749,10 @@ hidedecorations!(ax_model)
 sim_savedpath = string("./networks_trained/")
 
 # Choose the parameters
-Ncells = 3750
-Ni2 = 250
-Npop = 12
-Nsims = 10
+Ncells = 5000
+Ni2 = 400
+Npop = 20
+Nsims = 1
 
 x_vals = 1:Ni2
 ie_weights = zeros(Ni2, Npop, Nsims)
@@ -793,20 +795,22 @@ axislegend(ax, position=(.95, .95), labelsize=labelsize, titlesize=textsize)
 ############################# --- Histogram synaptic weights --- #############################
 ##############################################################################################
 # --- Load Data ---
-net_num = 4
+net_num = 1
 seed_num = 1
 mode = "spontaneous"
-sim_name = string("network_", net_num,"_", mode, "_seed_", seed_num, ".h5")
-sim_savedpath = string("./networks_trained_", mode, "/network_", net_num, "/")
+# sim_name = string("network_", net_num,"_", mode, "_seed_", seed_num, ".h5")
+# sim_savedpath = string("./networks_trained_", mode, "/network_", net_num, "/")
+sim_name = string("network_", net_num,"_", mode, ".h5")
+sim_savedpath = string("./networks_trained_", mode, "/")
 fid = h5open(joinpath(sim_savedpath, sim_name), "r")
 popmembers = read(fid["data"]["popmembers"])
 weights = read(fid["data"]["weights"])
 close(fid)
 
 # Parameters
-Ne = 3000
-Ni2 = 250
-seq_length = 3
+Ne = 4000
+Ni2 = 400
+seq_length = 4
 Ni_members = 25
 
 Npop = size(popmembers, 2)
@@ -814,9 +818,9 @@ Nmaxmembers = size(popmembers, 1)
 
 ipopmembers = findI2populations(weights, popmembers, iipop_len=Ni_members)
 
-weightsEE = sum(weights[popmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :] ./ count(i->i>0, weights[popmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :]
-weightsEI = sum(weights[popmembers[:, :], ipopmembers[:, :]], dims=(1, 3))[1, :, 1, :] ./ count(i->i>0, weights[popmembers[:, :], ipopmembers[:, :]], dims=(1, 3))[1, :, 1, :]
-weightsIE = sum(weights[ipopmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :] ./ count(i->i>0, weights[ipopmembers[:, :], popmembers[:, :]], dims=(1, 3))[1, :, 1, :]
+weightsEE = sum(weights[filter(i->i>0, popmembers[:, :]), filter(i->i>0, popmembers[:, :])], dims=(1, 3))[1, :, 1, :] ./ count(i->i>0, weights[filter(i->i>0, popmembers[:, :]), filter(i->i>0, popmembers[:, :])], dims=(1, 3))[1, :, 1, :]
+weightsEI = sum(weights[filter(i->i>0, popmembers[:, :]), ipopmembers[:, :]], dims=(1, 3))[1, :, 1, :] ./ count(i->i>0, weights[filter(i->i>0, popmembers[:, :]), ipopmembers[:, :]], dims=(1, 3))[1, :, 1, :]
+weightsIE = sum(weights[ipopmembers[:, :], filter(i->i>0, popmembers[:, :])], dims=(1, 3))[1, :, 1, :] ./ count(i->i>0, weights[ipopmembers[:, :], filter(i->i>0, popmembers[:, :])], dims=(1, 3))[1, :, 1, :]
 
 
 ########################################################
@@ -895,7 +899,7 @@ Colorbar(g_struct[1, 6], ht, size=colorbarsize, label=L"\text{mean coupling stre
 ############################# --- Structure during learning --- ##############################
 ##############################################################################################
 # --- Load Data ---
-sim_name = string("network_4.h5")
+sim_name = string("network_1.h5")
 sim_savedpath = string("./networks_trained/")
 fid = h5open(joinpath(sim_savedpath, sim_name), "r")
 popmembers = read(fid["data"]["popmembers"])
@@ -1168,9 +1172,9 @@ times = read(fid["data"]["times"])
 close(fid)
 
 # Parameters
-Ne = 3000
-Ni2 = 750
-seq_length = 3
+Ne = 4000
+Ni2 = 400
+seq_length = 4
 Ni_members = 25
 
 Ncells = size(times)[1]
@@ -1458,9 +1462,9 @@ times = read(fid["data"]["times"])
 close(fid)
 
 # Parameters
-Ne = 3000
-Ni2 = 250
-seq_length = 3
+Ne = 4000
+Ni2 = 400
+seq_length = 4
 Ni_members = 25
 
 Ncells = size(times)[1]
@@ -1714,9 +1718,9 @@ times = read(fid["data"]["times"])
 close(fid)
 
 # Parameters
-Ne = 3000
-Ni2 = 250
-seq_length = 3
+Ne = 4000
+Ni2 = 400
+seq_length = 4
 Ni_members = 25
 
 Ncells = size(times)[1]

@@ -20,9 +20,11 @@ stim_modes = ["spontaneous", "stimulation"]	# Choose between spontaneous or brie
 # sim_names = ["network_eiSTDP-knockout.h5", "network_i2STDP-knockout.h5", "network_i1STDP-knockout.h5"]
 for stim_mode in stim_modes
 for sim_num = 1:1
-	sim_name = string("network_", sim_num,".h5")
+	# sim_name = string("network_", sim_num,".h5")
 	# sim_name = string("network_", sim_num,"_eiSTDP-knockout.h5")
-	# sim_name = string("network_", sim_num,"_pre-train.h5")
+	# sim_name = string("network_", sim_num,"_i2STDP-knockout.h5")
+	# sim_name = string("network_", sim_num,"_i1STDP-knockout.h5")
+	sim_name = string("network_", sim_num,"_pre-train.h5")
 	# sim_name = string("network_", sim_num,"_train.h5")
 	if loadnet
 		T = 20_000
@@ -40,6 +42,7 @@ for sim_num = 1:1
 		# stim = makeStimSeq(4, 20, seq_len=3)
 		# Full train 5 sequences x 4 assemblies
 		T = 1_500_000
+		# T = 40_000
 		stim = makeStimSeq(5, 20, seq_len=4)
 	end
 

@@ -10,7 +10,7 @@ function plotNetworkActivity(times::Matrix{Float64}, popmembers::Matrix{Int64}, 
     Ni2::Int64 = round(Int, (Ncells*0.2)/2)
     Npop::Int64 = size(popmembers, 2)
     Nmembers_max::Int64 = size(popmembers, 1)
-    Ni_members::Int64 = 50
+    Ni_members::Int64 = 20
     plot_interval::Vector{Int64} = collect((minimum(interval)):1000:maximum(interval))
 
     labelsize::Int64 = 24

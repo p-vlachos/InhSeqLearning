@@ -50,7 +50,7 @@ end
 
 function makeStimSeq_brief(T::Int64; Npop::Int64=20, stim_rate::Float64=8., seq_len::Int64=4, seq_num::Int64=5, randomize=true)
 	# Create sequences of stimuli
-	stim_delay::Float64 = 1_000. 	# Should be greater than or equal to 'stdpdelay' (ms)
+	stim_delay::Float64 = 10_000. 	# Should be greater than or equal to 'stdpdelay' (ms)
 	stim_duration::Float64 = 100. 	# Stimulation period for each assembly (ms)
 	stim_interval::Float64 = 400.	# Interval between each assembly stimulation (ms)
 
@@ -129,7 +129,7 @@ end
 function binRates(spikeTimes::Matrix{Float64}; interval::AbstractVector, dt::Float64=.125, window::Int64=20)
 	Ncells::Int64 = size(spikeTimes)[1]
 	Nsteps::Int64 = round(Int, length(interval) / dt)
-	rates::Matrix{Int64} = zeros(Ncells, Nsteps)
+	rates::Matrix{Float64} = zeros(Ncells, Nsteps)
 	# Compute spike count per ms
 	for cc = 1:Ncells
 		for tt in filter(i->(interval[1]<i<interval[end]), spikeTimes[cc, :])

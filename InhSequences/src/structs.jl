@@ -56,7 +56,7 @@ end
 	jiemin::Float64 = .1 			# Minimum E➡I₂ strength (pF)
 	jiemax::Float64 = 4. 			# Maximum E➡I₂ strength (pF)
 	jei2min::Float64 = .01			# Minimum I₂➡E strength (pF)
-	jei2max::Float64 = 48.7 #80. # 121. 		# Maximum I₂➡E strength (pF)
+	jei2max::Float64 = 97.4 		# Maximum I₂➡E strength (pF)
 end
 
 @with_kw struct PlasticityParameters
